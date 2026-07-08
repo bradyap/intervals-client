@@ -63,6 +63,32 @@ describe('IntervalsClient', () => {
     );
   });
 
+  it('stores trimmed constructor string options', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ id: 'i123' }), {
+        status: 200,
+      }),
+    );
+    const client = new IntervalsClient({
+      apiKey: ' secret ',
+      athleteId: ' i123 ',
+      baseUrl: ' https://example.test/api/ ',
+      fetch: fetchMock,
+    });
+
+    await client.getAthleteProfile();
+
+    expect(client.athleteId).toBe('i123');
+    expect(client.baseUrl).toBe('https://example.test/api');
+    expect(fetchMock).toHaveBeenCalledWith('https://example.test/api/athlete/i123', {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Basic ${Buffer.from('API_KEY:secret', 'utf8').toString('base64')}`,
+      },
+      method: 'GET',
+    });
+  });
+
   it('rejects an empty API key', () => {
     expect(() => new IntervalsClient({ apiKey: '   ' })).toThrow(TypeError);
   });

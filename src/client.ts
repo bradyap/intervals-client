@@ -21,13 +21,15 @@ export class IntervalsClient {
   readonly #fetch: typeof fetch;
 
   constructor(options: IntervalsClientOptions) {
-    if (options.apiKey.trim().length === 0) {
+    const apiKey = options.apiKey.trim();
+
+    if (apiKey.length === 0) {
       throw new TypeError('apiKey must not be empty');
     }
 
-    this.#apiKey = options.apiKey;
-    this.athleteId = options.athleteId ?? defaultAthleteId;
-    this.baseUrl = normalizeBaseUrl(options.baseUrl ?? defaultBaseUrl);
+    this.#apiKey = apiKey;
+    this.athleteId = options.athleteId?.trim() ?? defaultAthleteId;
+    this.baseUrl = normalizeBaseUrl(options.baseUrl?.trim() ?? defaultBaseUrl);
     this.#fetch = options.fetch ?? fetch;
   }
 
