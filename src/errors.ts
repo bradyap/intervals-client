@@ -16,6 +16,13 @@ export class IntervalsHttpError extends Error {
   }
 }
 
+export class IntervalsRequestError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'IntervalsRequestError';
+  }
+}
+
 export class IntervalsResponseError extends Error {
   readonly body: string;
   readonly url: string;
