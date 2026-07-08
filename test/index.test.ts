@@ -22,7 +22,7 @@ describe('IntervalsClient', () => {
     );
     const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
 
-    const profile = await client.getAthleteProfile();
+    const profile = await client.athlete.get();
 
     expect(profile).toEqual({ id: 'i123', name: 'Test Athlete', custom: true });
     expect(fetchMock).toHaveBeenCalledWith('https://intervals.icu/api/v1/athlete/0', {
@@ -46,8 +46,8 @@ describe('IntervalsClient', () => {
       fetch: fetchMock,
     });
 
-    await client.getAthleteProfile();
-    await client.getAthleteProfile('athlete/with space');
+    await client.athlete.get();
+    await client.athlete.get({ athleteId: 'athlete/with space' });
 
     expect(client.athleteId).toBe('i123');
     expect(client.baseUrl).toBe('https://example.test/api');
@@ -76,7 +76,7 @@ describe('IntervalsClient', () => {
       fetch: fetchMock,
     });
 
-    await client.getAthleteProfile();
+    await client.athlete.get();
 
     expect(client.athleteId).toBe('i123');
     expect(client.baseUrl).toBe('https://example.test/api');
@@ -101,7 +101,7 @@ describe('IntervalsClient', () => {
       }),
     );
     const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
-    const errorPromise = client.getAthleteProfile();
+    const errorPromise = client.athlete.get();
 
     await expect(errorPromise).rejects.toMatchObject({
       body: 'Access denied',
@@ -119,7 +119,7 @@ describe('IntervalsClient', () => {
       }),
     );
     const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
-    const errorPromise = client.getAthleteProfile();
+    const errorPromise = client.athlete.get();
 
     await expect(errorPromise).rejects.toMatchObject({
       body: JSON.stringify({ name: 'Missing ID' }),
@@ -136,7 +136,7 @@ describe('IntervalsClient', () => {
       }),
     );
     const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
-    const errorPromise = client.getAthleteProfile();
+    const errorPromise = client.athlete.get();
 
     await expect(errorPromise).rejects.toMatchObject({
       body: 'not json',

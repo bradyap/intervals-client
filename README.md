@@ -11,7 +11,7 @@ const apiKey = process.env.INTERVALS_API_KEY;
 if (!apiKey) throw new Error('INTERVALS_API_KEY is required');
 
 const client = new IntervalsClient({ apiKey });
-const profile = await client.getAthleteProfile();
+const profile = await client.athlete.get();
 ```
 
 For personal API-key usage, Intervals.icu expects Basic Auth with username `API_KEY`; this

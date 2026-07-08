@@ -1,6 +1,10 @@
 import { Buffer } from 'node:buffer';
 
-import { parseAthleteProfile, type AthleteProfile } from './athlete.js';
+import {
+  IntervalsAthleteResource,
+  type AthleteResource,
+  type ResourceRequestOptions,
+} from './athlete.js';
 import { IntervalsHttpError, IntervalsResponseError } from './errors.js';
 
 const defaultBaseUrl = 'https://intervals.icu/api/v1';
@@ -14,6 +18,7 @@ export interface IntervalsClientOptions {
 }
 
 export class IntervalsClient {
+  readonly athlete: AthleteResource;
   readonly athleteId: string;
   readonly baseUrl: string;
 
@@ -31,10 +36,17 @@ export class IntervalsClient {
     this.athleteId = options.athleteId?.trim() ?? defaultAthleteId;
     this.baseUrl = normalizeBaseUrl(options.baseUrl?.trim() ?? defaultBaseUrl);
     this.#fetch = options.fetch ?? fetch;
+    this.athlete = new IntervalsAthleteResource({
+      defaultAthleteId: this.athleteId,
+      requestJson: <ResponseBody>(requestOptions: ResourceRequestOptions<ResponseBody>) =>
+        this.#requestJson<ResponseBody>(requestOptions),
+    });
   }
 
-  async getAthleteProfile(athleteId = this.athleteId): Promise<AthleteProfile> {
-    const { body, url } = await this.#requestText(['athlete', athleteId]);
+  async #requestJson<ResponseBody>(
+    options: ResourceRequestOptions<ResponseBody>,
+  ): Promise<ResponseBody> {
+    const { body, url } = await this.#requestText(options.pathSegments);
     let parsedBody: unknown;
 
     try {
@@ -49,12 +61,12 @@ export class IntervalsClient {
     }
 
     try {
-      return parseAthleteProfile(parsedBody);
+      return options.parse(parsedBody);
     } catch (cause) {
       throw new IntervalsResponseError({
         body,
         cause,
-        message: 'Intervals.icu response did not match the expected athlete profile shape',
+        message: options.validationMessage,
         url,
       });
     }

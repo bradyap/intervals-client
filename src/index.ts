@@ -1,4 +1,4 @@
-export type { AthleteProfile } from './athlete.js';
+export type { AthleteProfile, AthleteResource, GetAthleteOptions } from './athlete.js';
 export { IntervalsClient, type IntervalsClientOptions } from './client.js';
 export { IntervalsHttpError, IntervalsResponseError } from './errors.js';
 
