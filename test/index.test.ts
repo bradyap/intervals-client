@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { IntervalsClient, IntervalsHttpError, intervalsClientVersion } from '../src/index.js';
+import {
+  IntervalsClient,
+  IntervalsHttpError,
+  IntervalsResponseError,
+  intervalsClientVersion,
+} from '../src/index.js';
 
 describe('intervalsClientVersion', () => {
   it('exports the package version placeholder', () => {
@@ -88,7 +93,30 @@ describe('IntervalsClient', () => {
       }),
     );
     const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const errorPromise = client.getAthleteProfile();
 
-    await expect(client.getAthleteProfile()).rejects.toThrow();
+    await expect(errorPromise).rejects.toMatchObject({
+      body: JSON.stringify({ name: 'Missing ID' }),
+      message: 'Intervals.icu response did not match the expected athlete profile shape',
+      url: 'https://intervals.icu/api/v1/athlete/0',
+    });
+    await expect(errorPromise).rejects.toBeInstanceOf(IntervalsResponseError);
+  });
+
+  it('throws an IntervalsResponseError for malformed JSON responses', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response('not json', {
+        status: 200,
+      }),
+    );
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const errorPromise = client.getAthleteProfile();
+
+    await expect(errorPromise).rejects.toMatchObject({
+      body: 'not json',
+      message: 'Intervals.icu response was not valid JSON',
+      url: 'https://intervals.icu/api/v1/athlete/0',
+    });
+    await expect(errorPromise).rejects.toBeInstanceOf(IntervalsResponseError);
   });
 });

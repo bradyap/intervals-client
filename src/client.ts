@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 
 import { parseAthleteProfile, type AthleteProfile } from './athlete.js';
-import { IntervalsHttpError } from './errors.js';
+import { IntervalsHttpError, IntervalsResponseError } from './errors.js';
 
 const defaultBaseUrl = 'https://intervals.icu/api/v1';
 const defaultAthleteId = '0';
@@ -32,13 +32,33 @@ export class IntervalsClient {
   }
 
   async getAthleteProfile(athleteId = this.athleteId): Promise<AthleteProfile> {
-    const responseBody = await this.#requestText(['athlete', athleteId]);
-    const parsedBody: unknown = JSON.parse(responseBody);
+    const { body, url } = await this.#requestText(['athlete', athleteId]);
+    let parsedBody: unknown;
 
-    return parseAthleteProfile(parsedBody);
+    try {
+      parsedBody = JSON.parse(body) as unknown;
+    } catch (cause) {
+      throw new IntervalsResponseError({
+        body,
+        cause,
+        message: 'Intervals.icu response was not valid JSON',
+        url,
+      });
+    }
+
+    try {
+      return parseAthleteProfile(parsedBody);
+    } catch (cause) {
+      throw new IntervalsResponseError({
+        body,
+        cause,
+        message: 'Intervals.icu response did not match the expected athlete profile shape',
+        url,
+      });
+    }
   }
 
-  async #requestText(pathSegments: string[]): Promise<string> {
+  async #requestText(pathSegments: string[]): Promise<{ body: string; url: string }> {
     const url = this.#buildUrl(pathSegments);
     const response = await this.#fetch(url, {
       headers: {
@@ -58,7 +78,7 @@ export class IntervalsClient {
       });
     }
 
-    return body;
+    return { body, url };
   }
 
   #authorizationHeader(): string {

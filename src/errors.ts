@@ -15,3 +15,15 @@ export class IntervalsHttpError extends Error {
     this.url = options.url;
   }
 }
+
+export class IntervalsResponseError extends Error {
+  readonly body: string;
+  readonly url: string;
+
+  constructor(options: { body: string; cause: unknown; message: string; url: string }) {
+    super(options.message, { cause: options.cause });
+    this.name = 'IntervalsResponseError';
+    this.body = options.body;
+    this.url = options.url;
+  }
+}
