@@ -20,7 +20,11 @@ export function validateDateRange(range: DateRange): DateRange {
   return { oldest, newest };
 }
 
-function validateIsoDateString(fieldName: keyof DateRange, value: IsoDateString): IsoDateString {
+function validateIsoDateString(fieldName: keyof DateRange, value: unknown): IsoDateString {
+  if (typeof value !== 'string') {
+    throw new IntervalsRequestError(`${fieldName} must be a string in YYYY-MM-DD format`);
+  }
+
   const trimmedValue = value.trim();
 
   if (!isoDatePattern.test(trimmedValue)) {

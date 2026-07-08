@@ -252,6 +252,8 @@ describe('ActivitiesResource', () => {
     { label: 'malformed oldest', oldest: '2026-7-01', newest: '2026-07-08' },
     { label: 'malformed newest', oldest: '2026-07-01', newest: '20260708' },
     { label: 'reversed range', oldest: '2026-07-08', newest: '2026-07-01' },
+    { label: 'non-string oldest', oldest: undefined as never, newest: '2026-07-08' },
+    { label: 'non-string newest', oldest: '2026-07-01', newest: new Date() as never },
   ])('rejects $label before fetch', async ({ oldest, newest }) => {
     const fetchMock = vi.fn<typeof fetch>();
     const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });

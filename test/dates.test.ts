@@ -28,4 +28,20 @@ describe('validateDateRange', () => {
   ])('rejects $label', ({ oldest, newest }) => {
     expect(() => validateDateRange({ oldest, newest })).toThrow(IntervalsRequestError);
   });
+
+  it.each([
+    { label: 'undefined oldest', oldest: undefined, newest: '2026-07-08' },
+    { label: 'null oldest', oldest: null, newest: '2026-07-08' },
+    { label: 'date object oldest', oldest: new Date('2026-07-01T00:00:00Z'), newest: '2026-07-08' },
+    { label: 'number oldest', oldest: 20260701, newest: '2026-07-08' },
+    { label: 'undefined newest', oldest: '2026-07-01', newest: undefined },
+    { label: 'null newest', oldest: '2026-07-01', newest: null },
+  ])('rejects non-string input: $label', ({ oldest, newest }) => {
+    expect(() =>
+      validateDateRange({
+        oldest: oldest as never,
+        newest: newest as never,
+      }),
+    ).toThrow(IntervalsRequestError);
+  });
 });
