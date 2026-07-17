@@ -38,4 +38,4 @@ export type {
   WorkoutsResource,
 } from './workouts.js';
 
-export const intervalsClientVersion = '0.1.0';
+export const intervalsClientVersion = '0.2.0';

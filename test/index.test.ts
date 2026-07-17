@@ -14,7 +14,7 @@ import { getRequestedUrl } from './helpers.js';
 
 describe('intervalsClientVersion', () => {
   it('exports the package version placeholder', () => {
-    expect(intervalsClientVersion).toBe('0.1.0');
+    expect(intervalsClientVersion).toBe('0.2.0');
   });
 });
 
@@ -37,6 +37,21 @@ describe('IntervalsClient', () => {
       },
       method: 'GET',
     });
+  });
+
+  it('forwards abort signals when fetching the athlete profile', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify({ id: 'i123' }), { status: 200 }));
+    const abortController = new AbortController();
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    await client.athlete.get({ signal: abortController.signal });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ signal: abortController.signal }),
+    );
   });
 
   it('uses configured client options and allows a per-call athlete id override', async () => {

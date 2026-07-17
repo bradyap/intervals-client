@@ -12,6 +12,7 @@ describe('FoldersResource', () => {
         canEdit: true,
         shareToken: null,
         sharedWithCount: 0,
+        num_workouts: null,
         children: [{ id: 456 }],
         customField: true,
       },

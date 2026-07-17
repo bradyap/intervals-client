@@ -10,7 +10,7 @@ const folderSchema = z.looseObject({
   children: z.array(z.unknown()).optional(),
   description: z.string().nullable().optional(),
   name: z.string().optional(),
-  num_workouts: z.number().optional(),
+  num_workouts: z.number().nullable().optional(),
   read_only_workouts: z.boolean().optional(),
   shareToken: z.string().nullable().optional(),
   sharedWithCount: z.number().optional(),
