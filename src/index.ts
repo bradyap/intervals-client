@@ -23,11 +23,19 @@ export type {
   GetEventOptions,
   ListEventsOptions,
 } from './events.js';
+export type { FoldersResource, ListFoldersOptions, WorkoutFolder } from './folders.js';
 export type {
   GetWellnessOptions,
   ListWellnessOptions,
   WellnessRecord,
   WellnessResource,
 } from './wellness.js';
+export type {
+  GetWorkoutOptions,
+  ListWorkoutsOptions,
+  Workout,
+  WorkoutId,
+  WorkoutsResource,
+} from './workouts.js';
 
 export const intervalsClientVersion = '0.1.0';
