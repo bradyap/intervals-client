@@ -3,7 +3,8 @@ import { Buffer } from 'node:buffer';
 import { IntervalsActivitiesResource, type ActivitiesResource } from './activities.js';
 import { IntervalsAthleteResource, type AthleteResource } from './athlete.js';
 import { IntervalsHttpError, IntervalsResponseError } from './errors.js';
-import type { ResourceRequestOptions } from './request.js';
+import type { ResourceRequester, ResourceRequestOptions } from './request.js';
+import { IntervalsWellnessResource, type WellnessResource } from './wellness.js';
 
 const defaultBaseUrl = 'https://intervals.icu/api/v1';
 const defaultAthleteId = '0';
@@ -20,6 +21,7 @@ export class IntervalsClient {
   readonly athlete: AthleteResource;
   readonly athleteId: string;
   readonly baseUrl: string;
+  readonly wellness: WellnessResource;
 
   readonly #apiKey: string;
   readonly #fetch: typeof fetch;
@@ -35,15 +37,20 @@ export class IntervalsClient {
     this.athleteId = normalizeOptionalString(options.athleteId) ?? defaultAthleteId;
     this.baseUrl = normalizeBaseUrl(options.baseUrl?.trim() ?? defaultBaseUrl);
     this.#fetch = options.fetch ?? fetch;
+    const requestJson: ResourceRequester = <ResponseBody>(
+      requestOptions: ResourceRequestOptions<ResponseBody>,
+    ) => this.#requestJson<ResponseBody>(requestOptions);
     this.activities = new IntervalsActivitiesResource({
       defaultAthleteId: this.athleteId,
-      requestJson: <ResponseBody>(requestOptions: ResourceRequestOptions<ResponseBody>) =>
-        this.#requestJson<ResponseBody>(requestOptions),
+      requestJson,
     });
     this.athlete = new IntervalsAthleteResource({
       defaultAthleteId: this.athleteId,
-      requestJson: <ResponseBody>(requestOptions: ResourceRequestOptions<ResponseBody>) =>
-        this.#requestJson<ResponseBody>(requestOptions),
+      requestJson,
+    });
+    this.wellness = new IntervalsWellnessResource({
+      defaultAthleteId: this.athleteId,
+      requestJson,
     });
   }
 

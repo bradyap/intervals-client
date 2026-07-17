@@ -19,3 +19,19 @@ export function validateRequiredString(fieldName: string, value: unknown): strin
 
   return trimmedValue;
 }
+
+export function validateResourceId(fieldName: string, value: unknown): string {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      throw new IntervalsRequestError(`${fieldName} must be a non-empty string or finite number`);
+    }
+
+    return String(value);
+  }
+
+  if (typeof value === 'string') {
+    return validateRequiredString(fieldName, value);
+  }
+
+  throw new IntervalsRequestError(`${fieldName} must be a non-empty string or finite number`);
+}
