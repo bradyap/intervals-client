@@ -2,7 +2,9 @@ import { Buffer } from 'node:buffer';
 
 import { IntervalsActivitiesResource, type ActivitiesResource } from './activities.js';
 import { IntervalsAthleteResource, type AthleteResource } from './athlete.js';
+import { IntervalsCalendarsResource, type CalendarsResource } from './calendars.js';
 import { IntervalsHttpError, IntervalsResponseError } from './errors.js';
+import { IntervalsEventsResource, type EventsResource } from './events.js';
 import type { ResourceRequester, ResourceRequestOptions } from './request.js';
 import { IntervalsWellnessResource, type WellnessResource } from './wellness.js';
 
@@ -21,6 +23,8 @@ export class IntervalsClient {
   readonly athlete: AthleteResource;
   readonly athleteId: string;
   readonly baseUrl: string;
+  readonly calendars: CalendarsResource;
+  readonly events: EventsResource;
   readonly wellness: WellnessResource;
 
   readonly #apiKey: string;
@@ -45,6 +49,14 @@ export class IntervalsClient {
       requestJson,
     });
     this.athlete = new IntervalsAthleteResource({
+      defaultAthleteId: this.athleteId,
+      requestJson,
+    });
+    this.calendars = new IntervalsCalendarsResource({
+      defaultAthleteId: this.athleteId,
+      requestJson,
+    });
+    this.events = new IntervalsEventsResource({
       defaultAthleteId: this.athleteId,
       requestJson,
     });
