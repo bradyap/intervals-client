@@ -10,6 +10,7 @@ export class IntervalsHttpError extends Error {
     );
     this.name = 'IntervalsHttpError';
     this.body = options.body;
+    Object.defineProperty(this, 'body', { enumerable: false });
     this.status = options.status;
     this.statusText = options.statusText;
     this.url = options.url;
@@ -31,6 +32,7 @@ export class IntervalsResponseError extends Error {
     super(options.message, { cause: options.cause });
     this.name = 'IntervalsResponseError';
     this.body = options.body;
+    Object.defineProperty(this, 'body', { enumerable: false });
     this.url = options.url;
   }
 }

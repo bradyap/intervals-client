@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-import { IntervalsRequestError } from './errors.js';
 import type { ResourceRequester } from './request.js';
 import { validateRequiredString } from './resources.js';
 
@@ -21,7 +20,7 @@ export type ActivityStream = z.infer<typeof activityStreamSchema>;
 
 export interface GetActivityStreamsOptions {
   signal?: AbortSignal;
-  types?: readonly string[];
+  types?: string;
 }
 
 export interface ActivityStreamsResource {
@@ -44,8 +43,9 @@ export class IntervalsActivityStreamsResource implements ActivityStreamsResource
     options: GetActivityStreamsOptions = {},
   ): Promise<ActivityStream[]> {
     const normalizedActivityId = validateRequiredString('activityId', activityId);
-    const types = normalizeStreamTypes(options.types);
-    const query = types ? new URLSearchParams([['types', types.join(',')]]) : undefined;
+    const types =
+      options.types === undefined ? undefined : validateRequiredString('types', options.types);
+    const query = types ? new URLSearchParams([['types', types]]) : undefined;
 
     return this.#requestJson({
       pathSegments: ['activity', normalizedActivityId, 'streams.json'],
@@ -59,18 +59,4 @@ export class IntervalsActivityStreamsResource implements ActivityStreamsResource
 
 export function parseActivityStreams(value: unknown): ActivityStream[] {
   return activityStreamsSchema.parse(value);
-}
-
-function normalizeStreamTypes(types: readonly string[] | undefined): string[] | undefined {
-  if (types === undefined) {
-    return undefined;
-  }
-
-  if (types.length === 0) {
-    throw new IntervalsRequestError('types must contain at least one non-empty stream type');
-  }
-
-  const normalizedTypes = types.map((type) => validateRequiredString('stream type', type));
-
-  return [...new Set(normalizedTypes)];
 }

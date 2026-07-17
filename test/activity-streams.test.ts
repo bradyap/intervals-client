@@ -22,7 +22,7 @@ describe('ActivityStreamsResource', () => {
 
     const streams = await client.activities.streams.get(' activity/with space ', {
       signal: abortController.signal,
-      types: [' watts ', 'heartrate', 'watts'],
+      types: ' watts,heartrate ',
     });
 
     expect(streams).toEqual(responseBody);
@@ -56,11 +56,8 @@ describe('ActivityStreamsResource', () => {
     await expect(client.activities.streams.get('   ')).rejects.toBeInstanceOf(
       IntervalsRequestError,
     );
-    await expect(client.activities.streams.get('activity-1', { types: [] })).rejects.toBeInstanceOf(
-      IntervalsRequestError,
-    );
     await expect(
-      client.activities.streams.get('activity-1', { types: ['   '] }),
+      client.activities.streams.get('activity-1', { types: '   ' }),
     ).rejects.toBeInstanceOf(IntervalsRequestError);
     expect(fetchMock).not.toHaveBeenCalled();
   });

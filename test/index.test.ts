@@ -130,6 +130,8 @@ describe('IntervalsClient', () => {
       url: 'https://intervals.icu/api/v1/athlete/0',
     });
     await expect(errorPromise).rejects.toBeInstanceOf(IntervalsHttpError);
+    const error = await errorPromise.catch((cause: unknown) => cause);
+    expect(Object.prototype.propertyIsEnumerable.call(error, 'body')).toBe(false);
   });
 
   it('fails validation when the athlete profile response is missing an id', async () => {
@@ -147,6 +149,8 @@ describe('IntervalsClient', () => {
       url: 'https://intervals.icu/api/v1/athlete/0',
     });
     await expect(errorPromise).rejects.toBeInstanceOf(IntervalsResponseError);
+    const error = await errorPromise.catch((cause: unknown) => cause);
+    expect(Object.prototype.propertyIsEnumerable.call(error, 'body')).toBe(false);
   });
 
   it('throws an IntervalsResponseError for malformed JSON responses', async () => {
