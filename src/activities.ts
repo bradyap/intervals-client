@@ -5,16 +5,16 @@ import type { ResourceRequester } from './request.js';
 import { resolveAthleteId, validateRequiredString } from './resources.js';
 
 const activityShape = {
-  description: z.string().optional(),
-  distance: z.number().optional(),
+  description: z.string().nullable().optional(),
+  distance: z.number().nullable().optional(),
   elapsed_time: z.number().optional(),
   id: z.string(),
-  icu_training_load: z.number().optional(),
+  icu_training_load: z.number().nullable().optional(),
   moving_time: z.number().optional(),
   name: z.string().optional(),
   start_date: z.string().optional(),
   start_date_local: z.string().optional(),
-  total_elevation_gain: z.number().optional(),
+  total_elevation_gain: z.number().nullable().optional(),
   type: z.string().optional(),
 };
 

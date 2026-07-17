@@ -249,6 +249,26 @@ describe('ActivitiesResource', () => {
     );
   });
 
+  it('accepts verified nullable activity fields', async () => {
+    const responseBody = [
+      {
+        id: 'activity-1',
+        description: null,
+        distance: null,
+        icu_training_load: null,
+        total_elevation_gain: null,
+      },
+    ];
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    await expect(
+      client.activities.list({ oldest: '2026-07-01', newest: '2026-07-08' }),
+    ).resolves.toEqual(responseBody);
+  });
+
   it('uses client athlete id and per-call athlete id overrides', async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
