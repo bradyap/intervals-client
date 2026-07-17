@@ -1,4 +1,11 @@
-export type { ActivitiesResource, ActivitySummary, ListActivitiesOptions } from './activities.js';
+export type {
+  ActivitiesResource,
+  ActivityDetail,
+  ActivityInterval,
+  ActivitySummary,
+  GetActivityOptions,
+  ListActivitiesOptions,
+} from './activities.js';
 export type { AthleteProfile, AthleteResource, GetAthleteOptions } from './athlete.js';
 export { IntervalsClient, type IntervalsClientOptions } from './client.js';
 export type { DateRange, IsoDateString } from './dates.js';

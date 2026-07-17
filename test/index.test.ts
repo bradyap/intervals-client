@@ -152,6 +152,73 @@ describe('IntervalsClient', () => {
 });
 
 describe('ActivitiesResource', () => {
+  it('gets activity detail with intervals and forwards abort signals', async () => {
+    const responseBody = {
+      id: 'activity-1',
+      name: 'Morning Ride',
+      start_date: '2026-07-01T10:00:00Z',
+      icu_intervals: [
+        {
+          id: 42,
+          type: 'WORK',
+          start_time: 60,
+          end_time: 120,
+          average_watts: 250,
+        },
+      ],
+      custom: true,
+    };
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
+    const abortController = new AbortController();
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    const activity = await client.activities.get(' activity/with space ', {
+      intervals: true,
+      signal: abortController.signal,
+    });
+
+    expect(activity).toEqual(responseBody);
+    const requestUrl = getRequestedUrl(fetchMock);
+    expect(requestUrl.pathname).toBe('/api/v1/activity/activity%2Fwith%20space');
+    expect(requestUrl.searchParams.get('intervals')).toBe('true');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ signal: abortController.signal }),
+    );
+  });
+
+  it('omits the intervals query parameter by default', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify({ id: 'activity-1' }), { status: 200 }));
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    await client.activities.get('activity-1');
+
+    expect(getRequestedUrl(fetchMock).searchParams.has('intervals')).toBe(false);
+  });
+
+  it('rejects a blank activity id before fetch', async () => {
+    const fetchMock = vi.fn<typeof fetch>();
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    await expect(client.activities.get('   ')).rejects.toBeInstanceOf(IntervalsRequestError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('throws an IntervalsResponseError when activity detail is missing an id', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify({ name: 'Missing ID' }), { status: 200 }));
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    await expect(client.activities.get('activity-1')).rejects.toBeInstanceOf(
+      IntervalsResponseError,
+    );
+  });
+
   it('lists activities with date query parameters and basic auth', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(JSON.stringify([{ id: 'activity-1', custom: true }]), {
@@ -180,6 +247,26 @@ describe('ActivitiesResource', () => {
         method: 'GET',
       }),
     );
+  });
+
+  it('accepts verified nullable activity fields', async () => {
+    const responseBody = [
+      {
+        id: 'activity-1',
+        description: null,
+        distance: null,
+        icu_training_load: null,
+        total_elevation_gain: null,
+      },
+    ];
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    await expect(
+      client.activities.list({ oldest: '2026-07-01', newest: '2026-07-08' }),
+    ).resolves.toEqual(responseBody);
   });
 
   it('uses client athlete id and per-call athlete id overrides', async () => {

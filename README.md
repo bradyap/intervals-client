@@ -13,6 +13,7 @@ if (!apiKey) throw new Error('INTERVALS_API_KEY is required');
 const client = new IntervalsClient({ apiKey });
 const profile = await client.athlete.get();
 const activities = await client.activities.list({ oldest: '2026-07-01', newest: '2026-07-08' });
+const activity = await client.activities.get(activities[0].id, { intervals: true });
 ```
 
 For personal API-key usage, Intervals.icu expects Basic Auth with username `API_KEY`; this
