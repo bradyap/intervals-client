@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+import {
+  IntervalsActivityStreamsResource,
+  type ActivityStreamsResource,
+} from './activity-streams.js';
 import { validateDateRange, type DateRange } from './dates.js';
 import type { ResourceRequester } from './request.js';
 import { resolveAthleteId, validateRequiredString } from './resources.js';
@@ -46,6 +50,7 @@ export interface ListActivitiesOptions extends DateRange {
 }
 
 export interface ActivitiesResource {
+  readonly streams: ActivityStreamsResource;
   get(activityId: string, options?: GetActivityOptions): Promise<ActivityDetail>;
   list(options: ListActivitiesOptions): Promise<ActivitySummary[]>;
 }
@@ -56,12 +61,15 @@ export interface ActivitiesResourceOptions {
 }
 
 export class IntervalsActivitiesResource implements ActivitiesResource {
+  readonly streams: ActivityStreamsResource;
+
   readonly #defaultAthleteId: string;
   readonly #requestJson: ResourceRequester;
 
   constructor(options: ActivitiesResourceOptions) {
     this.#defaultAthleteId = options.defaultAthleteId;
     this.#requestJson = options.requestJson;
+    this.streams = new IntervalsActivityStreamsResource({ requestJson: this.#requestJson });
   }
 
   async get(activityId: string, options: GetActivityOptions = {}): Promise<ActivityDetail> {

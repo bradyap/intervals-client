@@ -6,6 +6,11 @@ export type {
   GetActivityOptions,
   ListActivitiesOptions,
 } from './activities.js';
+export type {
+  ActivityStream,
+  ActivityStreamsResource,
+  GetActivityStreamsOptions,
+} from './activity-streams.js';
 export type { AthleteProfile, AthleteResource, GetAthleteOptions } from './athlete.js';
 export type { Calendar, CalendarsResource, ListCalendarsOptions } from './calendars.js';
 export { IntervalsClient, type IntervalsClientOptions } from './client.js';
