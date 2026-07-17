@@ -2,14 +2,43 @@ import { z } from 'zod';
 
 import { validateDateRange, type DateRange } from './dates.js';
 import type { ResourceRequester } from './request.js';
-import { resolveAthleteId } from './resources.js';
+import { resolveAthleteId, validateRequiredString } from './resources.js';
 
-const activitySummarySchema = z.looseObject({
+const activityShape = {
+  description: z.string().optional(),
+  distance: z.number().optional(),
+  elapsed_time: z.number().optional(),
   id: z.string(),
+  icu_training_load: z.number().optional(),
+  moving_time: z.number().optional(),
+  name: z.string().optional(),
+  start_date: z.string().optional(),
+  start_date_local: z.string().optional(),
+  total_elevation_gain: z.number().optional(),
+  type: z.string().optional(),
+};
+
+const activityIntervalSchema = z.looseObject({
+  end_time: z.number().optional(),
+  id: z.number().optional(),
+  start_time: z.number().optional(),
+  type: z.string().optional(),
+});
+const activitySummarySchema = z.looseObject(activityShape);
+const activityDetailSchema = z.looseObject({
+  ...activityShape,
+  icu_intervals: z.array(activityIntervalSchema).optional(),
 });
 const activitySummariesSchema = z.array(activitySummarySchema);
 
+export type ActivityDetail = z.infer<typeof activityDetailSchema>;
+export type ActivityInterval = z.infer<typeof activityIntervalSchema>;
 export type ActivitySummary = z.infer<typeof activitySummarySchema>;
+
+export interface GetActivityOptions {
+  intervals?: boolean;
+  signal?: AbortSignal;
+}
 
 export interface ListActivitiesOptions extends DateRange {
   athleteId?: string;
@@ -17,6 +46,7 @@ export interface ListActivitiesOptions extends DateRange {
 }
 
 export interface ActivitiesResource {
+  get(activityId: string, options?: GetActivityOptions): Promise<ActivityDetail>;
   list(options: ListActivitiesOptions): Promise<ActivitySummary[]>;
 }
 
@@ -32,6 +62,19 @@ export class IntervalsActivitiesResource implements ActivitiesResource {
   constructor(options: ActivitiesResourceOptions) {
     this.#defaultAthleteId = options.defaultAthleteId;
     this.#requestJson = options.requestJson;
+  }
+
+  async get(activityId: string, options: GetActivityOptions = {}): Promise<ActivityDetail> {
+    const normalizedActivityId = validateRequiredString('activityId', activityId);
+    const query = options.intervals ? new URLSearchParams([['intervals', 'true']]) : undefined;
+
+    return this.#requestJson({
+      pathSegments: ['activity', normalizedActivityId],
+      query,
+      signal: options.signal,
+      parse: parseActivityDetail,
+      validationMessage: 'Intervals.icu response did not match the expected activity detail shape',
+    });
   }
 
   async list(options: ListActivitiesOptions): Promise<ActivitySummary[]> {
@@ -53,6 +96,10 @@ export class IntervalsActivitiesResource implements ActivitiesResource {
         'Intervals.icu response did not match the expected activity summaries shape',
     });
   }
+}
+
+export function parseActivityDetail(value: unknown): ActivityDetail {
+  return activityDetailSchema.parse(value);
 }
 
 export function parseActivitySummaries(value: unknown): ActivitySummary[] {
