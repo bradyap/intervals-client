@@ -10,10 +10,11 @@ import {
   IntervalsResponseError,
   intervalsClientVersion,
 } from '../src/index.js';
+import { getRequestedUrl } from './helpers.js';
 
 describe('intervalsClientVersion', () => {
   it('exports the package version placeholder', () => {
-    expect(intervalsClientVersion).toBe('0.1.0');
+    expect(intervalsClientVersion).toBe('0.2.0');
   });
 });
 
@@ -36,6 +37,21 @@ describe('IntervalsClient', () => {
       },
       method: 'GET',
     });
+  });
+
+  it('forwards abort signals when fetching the athlete profile', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify({ id: 'i123' }), { status: 200 }));
+    const abortController = new AbortController();
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    await client.athlete.get({ signal: abortController.signal });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ signal: abortController.signal }),
+    );
   });
 
   it('uses configured client options and allows a per-call athlete id override', async () => {
@@ -114,6 +130,8 @@ describe('IntervalsClient', () => {
       url: 'https://intervals.icu/api/v1/athlete/0',
     });
     await expect(errorPromise).rejects.toBeInstanceOf(IntervalsHttpError);
+    const error = await errorPromise.catch((cause: unknown) => cause);
+    expect(Object.prototype.propertyIsEnumerable.call(error, 'body')).toBe(false);
   });
 
   it('fails validation when the athlete profile response is missing an id', async () => {
@@ -131,6 +149,8 @@ describe('IntervalsClient', () => {
       url: 'https://intervals.icu/api/v1/athlete/0',
     });
     await expect(errorPromise).rejects.toBeInstanceOf(IntervalsResponseError);
+    const error = await errorPromise.catch((cause: unknown) => cause);
+    expect(Object.prototype.propertyIsEnumerable.call(error, 'body')).toBe(false);
   });
 
   it('throws an IntervalsResponseError for malformed JSON responses', async () => {
@@ -408,19 +428,3 @@ describe('activity summary schema', () => {
     );
   });
 });
-
-function getRequestedUrl(fetchMock: ReturnType<typeof vi.fn<typeof fetch>>, callIndex = 0): URL {
-  const fetchCall = fetchMock.mock.calls.at(callIndex);
-
-  if (!fetchCall) {
-    throw new Error(`fetch call ${String(callIndex)} was not made`);
-  }
-
-  const requestedUrl = fetchCall[0];
-
-  if (requestedUrl instanceof Request) {
-    return new URL(requestedUrl.url);
-  }
-
-  return new URL(requestedUrl);
-}

@@ -2,8 +2,13 @@ import { Buffer } from 'node:buffer';
 
 import { IntervalsActivitiesResource, type ActivitiesResource } from './activities.js';
 import { IntervalsAthleteResource, type AthleteResource } from './athlete.js';
+import { IntervalsCalendarsResource, type CalendarsResource } from './calendars.js';
 import { IntervalsHttpError, IntervalsResponseError } from './errors.js';
-import type { ResourceRequestOptions } from './request.js';
+import { IntervalsEventsResource, type EventsResource } from './events.js';
+import { IntervalsFoldersResource, type FoldersResource } from './folders.js';
+import type { ResourceRequester, ResourceRequestOptions } from './request.js';
+import { IntervalsWellnessResource, type WellnessResource } from './wellness.js';
+import { IntervalsWorkoutsResource, type WorkoutsResource } from './workouts.js';
 
 const defaultBaseUrl = 'https://intervals.icu/api/v1';
 const defaultAthleteId = '0';
@@ -20,6 +25,11 @@ export class IntervalsClient {
   readonly athlete: AthleteResource;
   readonly athleteId: string;
   readonly baseUrl: string;
+  readonly calendars: CalendarsResource;
+  readonly events: EventsResource;
+  readonly folders: FoldersResource;
+  readonly wellness: WellnessResource;
+  readonly workouts: WorkoutsResource;
 
   readonly #apiKey: string;
   readonly #fetch: typeof fetch;
@@ -35,15 +45,36 @@ export class IntervalsClient {
     this.athleteId = normalizeOptionalString(options.athleteId) ?? defaultAthleteId;
     this.baseUrl = normalizeBaseUrl(options.baseUrl?.trim() ?? defaultBaseUrl);
     this.#fetch = options.fetch ?? fetch;
+    const requestJson: ResourceRequester = <ResponseBody>(
+      requestOptions: ResourceRequestOptions<ResponseBody>,
+    ) => this.#requestJson<ResponseBody>(requestOptions);
     this.activities = new IntervalsActivitiesResource({
       defaultAthleteId: this.athleteId,
-      requestJson: <ResponseBody>(requestOptions: ResourceRequestOptions<ResponseBody>) =>
-        this.#requestJson<ResponseBody>(requestOptions),
+      requestJson,
     });
     this.athlete = new IntervalsAthleteResource({
       defaultAthleteId: this.athleteId,
-      requestJson: <ResponseBody>(requestOptions: ResourceRequestOptions<ResponseBody>) =>
-        this.#requestJson<ResponseBody>(requestOptions),
+      requestJson,
+    });
+    this.calendars = new IntervalsCalendarsResource({
+      defaultAthleteId: this.athleteId,
+      requestJson,
+    });
+    this.events = new IntervalsEventsResource({
+      defaultAthleteId: this.athleteId,
+      requestJson,
+    });
+    this.folders = new IntervalsFoldersResource({
+      defaultAthleteId: this.athleteId,
+      requestJson,
+    });
+    this.wellness = new IntervalsWellnessResource({
+      defaultAthleteId: this.athleteId,
+      requestJson,
+    });
+    this.workouts = new IntervalsWorkoutsResource({
+      defaultAthleteId: this.athleteId,
+      requestJson,
     });
   }
 

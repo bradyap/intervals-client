@@ -12,6 +12,7 @@ export type AthleteProfile = z.infer<typeof athleteProfileSchema>;
 
 export interface GetAthleteOptions {
   athleteId?: string;
+  signal?: AbortSignal;
 }
 
 export interface AthleteResource {
@@ -35,6 +36,7 @@ export class IntervalsAthleteResource implements AthleteResource {
   async get(options: GetAthleteOptions = {}): Promise<AthleteProfile> {
     return this.#requestJson({
       pathSegments: ['athlete', resolveAthleteId(options.athleteId, this.#defaultAthleteId)],
+      signal: options.signal,
       parse: parseAthleteProfile,
       validationMessage: 'Intervals.icu response did not match the expected athlete profile shape',
     });
