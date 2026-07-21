@@ -8,6 +8,7 @@ import { IntervalsEventsResource, type EventsResource } from './events.js';
 import { IntervalsFoldersResource, type FoldersResource } from './folders.js';
 import type {
   ResourceRequester,
+  ResourceBytesRequester,
   ResourceRequestBaseOptions,
   ResourceRequestOptions,
   ResourceVoidRequester,
@@ -53,10 +54,13 @@ export class IntervalsClient {
     const requestJson: ResourceRequester = <ResponseBody>(
       requestOptions: ResourceRequestOptions<ResponseBody>,
     ) => this.#requestJson<ResponseBody>(requestOptions);
+    const requestBytes: ResourceBytesRequester = (requestOptions) =>
+      this.#requestBytes(requestOptions);
     const requestVoid: ResourceVoidRequester = (requestOptions) =>
       this.#requestVoid(requestOptions);
     this.activities = new IntervalsActivitiesResource({
       defaultAthleteId: this.athleteId,
+      requestBytes,
       requestJson,
     });
     this.athlete = new IntervalsAthleteResource({
@@ -117,10 +121,24 @@ export class IntervalsClient {
     }
   }
 
+  async #requestBytes(options: ResourceRequestBaseOptions): Promise<Uint8Array> {
+    const { response } = await this.#requestResponse(options);
+
+    return new Uint8Array(await response.arrayBuffer());
+  }
+
   async #requestText(options: ResourceRequestBaseOptions): Promise<{ body: string; url: string }> {
+    const { response, url } = await this.#requestResponse(options);
+
+    return { body: await response.text(), url };
+  }
+
+  async #requestResponse(
+    options: ResourceRequestBaseOptions,
+  ): Promise<{ response: Response; url: string }> {
     const url = this.#buildUrl(options.pathSegments, options.query);
     const headers: Record<string, string> = {
-      Accept: 'application/json',
+      Accept: options.accept ?? 'application/json',
       Authorization: this.#authorizationHeader(),
     };
     const requestInit: RequestInit = {
@@ -131,6 +149,8 @@ export class IntervalsClient {
     if (options.json !== undefined) {
       headers['Content-Type'] = 'application/json';
       requestInit.body = JSON.stringify(options.json);
+    } else if (options.body !== undefined) {
+      requestInit.body = options.body;
     }
 
     if (options.signal) {
@@ -138,9 +158,9 @@ export class IntervalsClient {
     }
 
     const response = await this.#fetch(url, requestInit);
-    const body = await response.text();
-
     if (!response.ok) {
+      const body = await response.text();
+
       throw new IntervalsHttpError({
         body,
         status: response.status,
@@ -149,11 +169,13 @@ export class IntervalsClient {
       });
     }
 
-    return { body, url };
+    return { response, url };
   }
 
   async #requestVoid(options: ResourceRequestBaseOptions): Promise<void> {
-    await this.#requestText(options);
+    const { response } = await this.#requestResponse(options);
+
+    await response.arrayBuffer();
   }
 
   #authorizationHeader(): string {

@@ -1,15 +1,30 @@
 export type {
   ActivitiesResource,
   ActivityDetail,
+  ActivityId,
   ActivityInterval,
   ActivitySummary,
+  ActivityUpdateInput,
+  ActivityUploadResult,
   GetActivityOptions,
   ListActivitiesOptions,
+  MutateActivityOptions,
+  UploadActivityOptions,
 } from './activities.js';
 export type {
+  ActivityFileResource,
+  ActivityFitFileResource,
+  BinaryInput,
+  GetActivityFileOptions,
+  GetActivityFitFileOptions,
+} from './activity-files.js';
+export type {
   ActivityStream,
+  ActivityStreamsUpdateResult,
   ActivityStreamsResource,
+  ActivityStreamWriteInput,
   GetActivityStreamsOptions,
+  WriteActivityStreamsOptions,
 } from './activity-streams.js';
 export type { AthleteProfile, AthleteResource, GetAthleteOptions } from './athlete.js';
 export type { Calendar, CalendarsResource, ListCalendarsOptions } from './calendars.js';
