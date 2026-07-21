@@ -25,7 +25,14 @@ export type {
   ListEventsOptions,
   WriteEventOptions,
 } from './events.js';
-export type { FoldersResource, ListFoldersOptions, WorkoutFolder } from './folders.js';
+export type {
+  FoldersResource,
+  ListFoldersOptions,
+  WorkoutFolder,
+  WorkoutFolderId,
+  WorkoutFolderWriteInput,
+  WriteFolderOptions,
+} from './folders.js';
 export type {
   GetWellnessOptions,
   ListWellnessOptions,
