@@ -4,6 +4,8 @@ A small TypeScript client for the Intervals.icu API.
 
 Requires Node.js 24 or newer.
 
+Install directly from GitHub with `npm install github:bradyap/intervals-client#v0.3.0`.
+
 ```ts
 import { IntervalsClient } from '@bradyap/intervals-client';
 

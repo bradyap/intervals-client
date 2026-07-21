@@ -1,6 +1,6 @@
 {
   "name": "@bradyap/intervals-client",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -19,6 +19,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "lint": "eslint . --max-warnings=0",

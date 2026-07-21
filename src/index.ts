@@ -35,7 +35,7 @@ export type {
   ListWorkoutsOptions,
   Workout,
   WorkoutId,
+  WorkoutWriteInput,
   WorkoutsResource,
+  WriteWorkoutOptions,
 } from './workouts.js';
-
-export const intervalsClientVersion = '0.2.0';
