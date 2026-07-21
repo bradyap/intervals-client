@@ -75,6 +75,7 @@ export class IntervalsClient {
     this.folders = new IntervalsFoldersResource({
       defaultAthleteId: this.athleteId,
       requestJson,
+      requestVoid,
     });
     this.wellness = new IntervalsWellnessResource({
       defaultAthleteId: this.athleteId,
