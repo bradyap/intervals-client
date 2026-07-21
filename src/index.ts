@@ -34,6 +34,7 @@ export { IntervalsHttpError, IntervalsRequestError, IntervalsResponseError } fro
 export type {
   CalendarEvent,
   CalendarEventWriteInput,
+  CreateEventOptions,
   EventId,
   EventsResource,
   GetEventOptions,
@@ -49,10 +50,20 @@ export type {
   WriteFolderOptions,
 } from './folders.js';
 export type {
+  GetSportSettingsOptions,
+  ListSportSettingsOptions,
+  SportSettings,
+  SportSettingsId,
+  SportSettingsResource,
+} from './sport-settings.js';
+export type {
   GetWellnessOptions,
   ListWellnessOptions,
+  WellnessBulkWriteInput,
   WellnessRecord,
   WellnessResource,
+  WellnessWriteInput,
+  WriteWellnessOptions,
 } from './wellness.js';
 export type {
   GetWorkoutOptions,

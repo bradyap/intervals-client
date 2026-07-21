@@ -72,4 +72,61 @@ describe('WellnessResource', () => {
 
     await expect(client.wellness.get('2026-07-01')).rejects.toBeInstanceOf(IntervalsResponseError);
   });
+
+  it('updates a daily wellness record using exact API fields', async () => {
+    const wellnessInput = { restingHR: 44, sleepSecs: 28_800, comments: 'Recovered' };
+    const responseBody = { id: '2026-07-01', ...wellnessInput, customField: true };
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
+    const abortController = new AbortController();
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    await expect(
+      client.wellness.update(' 2026-07-01 ', wellnessInput, {
+        athleteId: 'i123',
+        signal: abortController.signal,
+      }),
+    ).resolves.toEqual(responseBody);
+
+    expect(getRequestedUrl(fetchMock).pathname).toBe('/api/v1/athlete/i123/wellness/2026-07-01');
+    const requestInit = fetchMock.mock.calls[0]?.[1];
+    expect(requestInit?.method).toBe('PUT');
+    expect(requestInit?.body).toBe(JSON.stringify(wellnessInput));
+    expect(requestInit?.signal).toBe(abortController.signal);
+  });
+
+  it('updates multiple wellness records without parsing an empty response', async () => {
+    const records = [
+      { id: ' 2026-07-01 ', weight: 70.1 },
+      { id: '2026-07-02', hrv: 65 },
+    ];
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 200 }));
+    const client = new IntervalsClient({ apiKey: 'secret', athleteId: 'i123', fetch: fetchMock });
+
+    await expect(client.wellness.updateBulk(records)).resolves.toBeUndefined();
+
+    expect(getRequestedUrl(fetchMock).pathname).toBe('/api/v1/athlete/i123/wellness-bulk');
+    const requestInit = fetchMock.mock.calls[0]?.[1];
+    expect(requestInit?.method).toBe('PUT');
+    expect(requestInit?.body).toBe(
+      JSON.stringify([
+        { id: '2026-07-01', weight: 70.1 },
+        { id: '2026-07-02', hrv: 65 },
+      ]),
+    );
+  });
+
+  it('rejects invalid wellness write dates before fetch', async () => {
+    const fetchMock = vi.fn<typeof fetch>();
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    await expect(client.wellness.update('2026-02-30', {})).rejects.toBeInstanceOf(
+      IntervalsRequestError,
+    );
+    await expect(
+      client.wellness.updateBulk([{ id: '2026-02-30', weight: 70 }]),
+    ).rejects.toBeInstanceOf(IntervalsRequestError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
