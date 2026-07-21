@@ -70,6 +70,7 @@ export class IntervalsClient {
     this.events = new IntervalsEventsResource({
       defaultAthleteId: this.athleteId,
       requestJson,
+      requestVoid,
     });
     this.folders = new IntervalsFoldersResource({
       defaultAthleteId: this.athleteId,

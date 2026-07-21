@@ -18,10 +18,12 @@ export type { DateRange, IsoDateString } from './dates.js';
 export { IntervalsHttpError, IntervalsRequestError, IntervalsResponseError } from './errors.js';
 export type {
   CalendarEvent,
+  CalendarEventWriteInput,
   EventId,
   EventsResource,
   GetEventOptions,
   ListEventsOptions,
+  WriteEventOptions,
 } from './events.js';
 export type { FoldersResource, ListFoldersOptions, WorkoutFolder } from './folders.js';
 export type {
