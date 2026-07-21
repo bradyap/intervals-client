@@ -105,14 +105,16 @@ describe('WorkoutsResource', () => {
     expect(new Headers(requestInit?.headers).get('Content-Type')).toBe('application/json');
   });
 
-  it('deletes a workout without parsing an empty response', async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 }));
+  it('deletes a workout and returns the deleted workout ids', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify([123]), { status: 200 }));
     const abortController = new AbortController();
     const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
 
     await expect(
       client.workouts.delete(' workout/with space ', { signal: abortController.signal }),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual([123]);
 
     expect(getRequestedUrl(fetchMock).pathname).toBe(
       '/api/v1/athlete/0/workouts/workout%2Fwith%20space',
@@ -140,5 +142,14 @@ describe('WorkoutsResource', () => {
     const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
 
     await expect(client.workouts.get(123)).rejects.toBeInstanceOf(IntervalsResponseError);
+  });
+
+  it('rejects invalid workout delete responses', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify({ id: 123 }), { status: 200 }));
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    await expect(client.workouts.delete(123)).rejects.toBeInstanceOf(IntervalsResponseError);
   });
 });

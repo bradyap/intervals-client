@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { ResourceRequester, ResourceVoidRequester } from './request.js';
+import type { ResourceRequester } from './request.js';
 import { resolveAthleteId, validateResourceId } from './resources.js';
 
 const resourceIdSchema = z.union([z.string(), z.number()]);
@@ -16,6 +16,7 @@ const workoutSchema = z.looseObject({
   workout_doc: z.looseObject({}).nullable().optional(),
 });
 const workoutsSchema = z.array(workoutSchema);
+const deletedWorkoutIdsSchema = z.array(z.number());
 
 export type Workout = z.infer<typeof workoutSchema>;
 export type WorkoutId = string | number;
@@ -47,7 +48,7 @@ export interface WriteWorkoutOptions {
 
 export interface WorkoutsResource {
   create(workout: WorkoutWriteInput, options?: WriteWorkoutOptions): Promise<Workout>;
-  delete(workoutId: WorkoutId, options?: WriteWorkoutOptions): Promise<void>;
+  delete(workoutId: WorkoutId, options?: WriteWorkoutOptions): Promise<number[]>;
   get(workoutId: WorkoutId, options?: GetWorkoutOptions): Promise<Workout>;
   list(options?: ListWorkoutsOptions): Promise<Workout[]>;
   update(
@@ -60,18 +61,15 @@ export interface WorkoutsResource {
 export interface WorkoutsResourceOptions {
   defaultAthleteId: string;
   requestJson: ResourceRequester;
-  requestVoid: ResourceVoidRequester;
 }
 
 export class IntervalsWorkoutsResource implements WorkoutsResource {
   readonly #defaultAthleteId: string;
   readonly #requestJson: ResourceRequester;
-  readonly #requestVoid: ResourceVoidRequester;
 
   constructor(options: WorkoutsResourceOptions) {
     this.#defaultAthleteId = options.defaultAthleteId;
     this.#requestJson = options.requestJson;
-    this.#requestVoid = options.requestVoid;
   }
 
   async create(workout: WorkoutWriteInput, options: WriteWorkoutOptions = {}): Promise<Workout> {
@@ -89,8 +87,8 @@ export class IntervalsWorkoutsResource implements WorkoutsResource {
     });
   }
 
-  async delete(workoutId: WorkoutId, options: WriteWorkoutOptions = {}): Promise<void> {
-    await this.#requestVoid({
+  async delete(workoutId: WorkoutId, options: WriteWorkoutOptions = {}): Promise<number[]> {
+    return this.#requestJson({
       pathSegments: [
         'athlete',
         resolveAthleteId(options.athleteId, this.#defaultAthleteId),
@@ -99,6 +97,8 @@ export class IntervalsWorkoutsResource implements WorkoutsResource {
       ],
       method: 'DELETE',
       signal: options.signal,
+      parse: parseDeletedWorkoutIds,
+      validationMessage: 'Intervals.icu response did not match the expected workout ids shape',
     });
   }
 
@@ -156,4 +156,8 @@ export function parseWorkout(value: unknown): Workout {
 
 export function parseWorkouts(value: unknown): Workout[] {
   return workoutsSchema.parse(value);
+}
+
+export function parseDeletedWorkoutIds(value: unknown): number[] {
+  return deletedWorkoutIdsSchema.parse(value);
 }
