@@ -95,7 +95,6 @@ export class IntervalsClient {
     this.workouts = new IntervalsWorkoutsResource({
       defaultAthleteId: this.athleteId,
       requestJson,
-      requestVoid,
     });
   }
 
