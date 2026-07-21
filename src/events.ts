@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { validateDateRange, type DateRange } from './dates.js';
-import type { ResourceRequester } from './request.js';
+import type { ResourceRequester, ResourceVoidRequester } from './request.js';
 import { resolveAthleteId, validateRequiredString, validateResourceId } from './resources.js';
 
 const resourceIdSchema = z.union([z.string(), z.number()]);
@@ -23,6 +23,20 @@ const eventsSchema = z.array(eventSchema);
 export type CalendarEvent = z.infer<typeof eventSchema>;
 export type EventId = string | number;
 
+export interface CalendarEventWriteInput {
+  [field: string]: unknown;
+  calendar_id?: string | number | null;
+  category?: string | null;
+  description?: string | null;
+  end_date_local?: string | null;
+  icu_training_load?: number | null;
+  moving_time?: number | null;
+  name?: string | null;
+  start_date_local?: string | null;
+  type?: string | null;
+  workout_doc?: Record<string, unknown> | null;
+}
+
 export interface GetEventOptions {
   athleteId?: string;
   resolve?: boolean;
@@ -37,23 +51,69 @@ export interface ListEventsOptions extends DateRange {
   signal?: AbortSignal;
 }
 
+export interface WriteEventOptions {
+  athleteId?: string;
+  signal?: AbortSignal;
+}
+
 export interface EventsResource {
+  create(event: CalendarEventWriteInput, options?: WriteEventOptions): Promise<CalendarEvent>;
+  delete(eventId: EventId, options?: WriteEventOptions): Promise<void>;
   get(eventId: EventId, options?: GetEventOptions): Promise<CalendarEvent>;
   list(options: ListEventsOptions): Promise<CalendarEvent[]>;
+  update(
+    eventId: EventId,
+    event: CalendarEventWriteInput,
+    options?: WriteEventOptions,
+  ): Promise<CalendarEvent>;
 }
 
 export interface EventsResourceOptions {
   defaultAthleteId: string;
   requestJson: ResourceRequester;
+  requestVoid: ResourceVoidRequester;
 }
 
 export class IntervalsEventsResource implements EventsResource {
   readonly #defaultAthleteId: string;
   readonly #requestJson: ResourceRequester;
+  readonly #requestVoid: ResourceVoidRequester;
 
   constructor(options: EventsResourceOptions) {
     this.#defaultAthleteId = options.defaultAthleteId;
     this.#requestJson = options.requestJson;
+    this.#requestVoid = options.requestVoid;
+  }
+
+  async create(
+    event: CalendarEventWriteInput,
+    options: WriteEventOptions = {},
+  ): Promise<CalendarEvent> {
+    return this.#requestJson({
+      pathSegments: [
+        'athlete',
+        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+        'events',
+      ],
+      method: 'POST',
+      json: event,
+      signal: options.signal,
+      parse: parseEvent,
+      validationMessage: 'Intervals.icu response did not match the expected event shape',
+    });
+  }
+
+  async delete(eventId: EventId, options: WriteEventOptions = {}): Promise<void> {
+    await this.#requestVoid({
+      pathSegments: [
+        'athlete',
+        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+        'events',
+        validateResourceId('eventId', eventId),
+      ],
+      method: 'DELETE',
+      signal: options.signal,
+    });
   }
 
   async get(eventId: EventId, options: GetEventOptions = {}): Promise<CalendarEvent> {
@@ -106,6 +166,26 @@ export class IntervalsEventsResource implements EventsResource {
       signal: options.signal,
       parse: parseEvents,
       validationMessage: 'Intervals.icu response did not match the expected events shape',
+    });
+  }
+
+  async update(
+    eventId: EventId,
+    event: CalendarEventWriteInput,
+    options: WriteEventOptions = {},
+  ): Promise<CalendarEvent> {
+    return this.#requestJson({
+      pathSegments: [
+        'athlete',
+        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+        'events',
+        validateResourceId('eventId', eventId),
+      ],
+      method: 'PUT',
+      json: event,
+      signal: options.signal,
+      parse: parseEvent,
+      validationMessage: 'Intervals.icu response did not match the expected event shape',
     });
   }
 }
