@@ -56,8 +56,12 @@ export interface WriteEventOptions {
   signal?: AbortSignal;
 }
 
+export interface CreateEventOptions extends WriteEventOptions {
+  upsertOnUid?: boolean;
+}
+
 export interface EventsResource {
-  create(event: CalendarEventWriteInput, options?: WriteEventOptions): Promise<CalendarEvent>;
+  create(event: CalendarEventWriteInput, options?: CreateEventOptions): Promise<CalendarEvent>;
   delete(eventId: EventId, options?: WriteEventOptions): Promise<void>;
   get(eventId: EventId, options?: GetEventOptions): Promise<CalendarEvent>;
   list(options: ListEventsOptions): Promise<CalendarEvent[]>;
@@ -87,7 +91,7 @@ export class IntervalsEventsResource implements EventsResource {
 
   async create(
     event: CalendarEventWriteInput,
-    options: WriteEventOptions = {},
+    options: CreateEventOptions = {},
   ): Promise<CalendarEvent> {
     return this.#requestJson({
       pathSegments: [
@@ -97,6 +101,7 @@ export class IntervalsEventsResource implements EventsResource {
       ],
       method: 'POST',
       json: event,
+      query: new URLSearchParams([['upsertOnUid', String(options.upsertOnUid ?? false)]]),
       signal: options.signal,
       parse: parseEvent,
       validationMessage: 'Intervals.icu response did not match the expected event shape',

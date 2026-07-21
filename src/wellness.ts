@@ -6,7 +6,7 @@ import {
   type DateRange,
   type IsoDateString,
 } from './dates.js';
-import type { ResourceRequester } from './request.js';
+import type { ResourceRequester, ResourceVoidRequester } from './request.js';
 import { resolveAthleteId } from './resources.js';
 
 const optionalMetric = z.number().nullable().optional();
@@ -35,6 +35,33 @@ const wellnessRecordsSchema = z.array(wellnessRecordSchema);
 
 export type WellnessRecord = z.infer<typeof wellnessRecordSchema>;
 
+export interface WellnessWriteInput {
+  [field: string]: unknown;
+  atl?: number | null;
+  comments?: string | null;
+  ctl?: number | null;
+  fatigue?: number | null;
+  hrv?: number | null;
+  hrvSDNN?: number | null;
+  id?: IsoDateString;
+  locked?: boolean | null;
+  mood?: number | null;
+  motivation?: number | null;
+  readiness?: number | null;
+  restingHR?: number | null;
+  sleepScore?: number | null;
+  sleepSecs?: number | null;
+  soreness?: number | null;
+  spO2?: number | null;
+  steps?: number | null;
+  stress?: number | null;
+  weight?: number | null;
+}
+
+export interface WellnessBulkWriteInput extends WellnessWriteInput {
+  id: IsoDateString;
+}
+
 export interface GetWellnessOptions {
   athleteId?: string;
   signal?: AbortSignal;
@@ -45,23 +72,37 @@ export interface ListWellnessOptions extends DateRange {
   signal?: AbortSignal;
 }
 
+export interface WriteWellnessOptions {
+  athleteId?: string;
+  signal?: AbortSignal;
+}
+
 export interface WellnessResource {
   get(date: IsoDateString, options?: GetWellnessOptions): Promise<WellnessRecord>;
   list(options: ListWellnessOptions): Promise<WellnessRecord[]>;
+  update(
+    date: IsoDateString,
+    wellness: WellnessWriteInput,
+    options?: WriteWellnessOptions,
+  ): Promise<WellnessRecord>;
+  updateBulk(records: WellnessBulkWriteInput[], options?: WriteWellnessOptions): Promise<void>;
 }
 
 export interface WellnessResourceOptions {
   defaultAthleteId: string;
   requestJson: ResourceRequester;
+  requestVoid: ResourceVoidRequester;
 }
 
 export class IntervalsWellnessResource implements WellnessResource {
   readonly #defaultAthleteId: string;
   readonly #requestJson: ResourceRequester;
+  readonly #requestVoid: ResourceVoidRequester;
 
   constructor(options: WellnessResourceOptions) {
     this.#defaultAthleteId = options.defaultAthleteId;
     this.#requestJson = options.requestJson;
+    this.#requestVoid = options.requestVoid;
   }
 
   async get(date: IsoDateString, options: GetWellnessOptions = {}): Promise<WellnessRecord> {
@@ -96,6 +137,47 @@ export class IntervalsWellnessResource implements WellnessResource {
       signal: options.signal,
       parse: parseWellnessRecords,
       validationMessage: 'Intervals.icu response did not match the expected wellness records shape',
+    });
+  }
+
+  async update(
+    date: IsoDateString,
+    wellness: WellnessWriteInput,
+    options: WriteWellnessOptions = {},
+  ): Promise<WellnessRecord> {
+    return this.#requestJson({
+      pathSegments: [
+        'athlete',
+        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+        'wellness',
+        validateIsoDateString('date', date),
+      ],
+      method: 'PUT',
+      json: wellness,
+      signal: options.signal,
+      parse: parseWellnessRecord,
+      validationMessage: 'Intervals.icu response did not match the expected wellness record shape',
+    });
+  }
+
+  async updateBulk(
+    records: WellnessBulkWriteInput[],
+    options: WriteWellnessOptions = {},
+  ): Promise<void> {
+    const normalizedRecords = records.map((record) => ({
+      ...record,
+      id: validateIsoDateString('date', record.id),
+    }));
+
+    await this.#requestVoid({
+      pathSegments: [
+        'athlete',
+        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+        'wellness-bulk',
+      ],
+      method: 'PUT',
+      json: normalizedRecords,
+      signal: options.signal,
     });
   }
 }

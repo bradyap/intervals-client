@@ -13,6 +13,7 @@ import type {
   ResourceRequestOptions,
   ResourceVoidRequester,
 } from './request.js';
+import { IntervalsSportSettingsResource, type SportSettingsResource } from './sport-settings.js';
 import { IntervalsWellnessResource, type WellnessResource } from './wellness.js';
 import { IntervalsWorkoutsResource, type WorkoutsResource } from './workouts.js';
 
@@ -34,6 +35,7 @@ export class IntervalsClient {
   readonly calendars: CalendarsResource;
   readonly events: EventsResource;
   readonly folders: FoldersResource;
+  readonly sportSettings: SportSettingsResource;
   readonly wellness: WellnessResource;
   readonly workouts: WorkoutsResource;
 
@@ -81,9 +83,14 @@ export class IntervalsClient {
       requestJson,
       requestVoid,
     });
+    this.sportSettings = new IntervalsSportSettingsResource({
+      defaultAthleteId: this.athleteId,
+      requestJson,
+    });
     this.wellness = new IntervalsWellnessResource({
       defaultAthleteId: this.athleteId,
       requestJson,
+      requestVoid,
     });
     this.workouts = new IntervalsWorkoutsResource({
       defaultAthleteId: this.athleteId,

@@ -25,20 +25,37 @@ describe('EventsResource', () => {
     const event = await client.events.create(eventInput, {
       athleteId: 'i123',
       signal: abortController.signal,
+      upsertOnUid: true,
     });
 
     expect(event).toEqual(responseBody);
-    expect(getRequestedUrl(fetchMock).pathname).toBe('/api/v1/athlete/i123/events');
-    expect(fetchMock).toHaveBeenCalledWith('https://intervals.icu/api/v1/athlete/i123/events', {
-      body: JSON.stringify(eventInput),
-      headers: {
-        Accept: 'application/json',
-        Authorization: `Basic ${Buffer.from('API_KEY:secret', 'utf8').toString('base64')}`,
-        'Content-Type': 'application/json',
+    const requestedUrl = getRequestedUrl(fetchMock);
+    expect(requestedUrl.pathname).toBe('/api/v1/athlete/i123/events');
+    expect(requestedUrl.searchParams.get('upsertOnUid')).toBe('true');
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://intervals.icu/api/v1/athlete/i123/events?upsertOnUid=true',
+      {
+        body: JSON.stringify(eventInput),
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Basic ${Buffer.from('API_KEY:secret', 'utf8').toString('base64')}`,
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+        signal: abortController.signal,
       },
-      method: 'POST',
-      signal: abortController.signal,
-    });
+    );
+  });
+
+  it('defaults event creation to no UID upsert', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify({ id: 123 }), { status: 201 }));
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    await client.events.create({ name: 'Workout' });
+
+    expect(getRequestedUrl(fetchMock).searchParams.get('upsertOnUid')).toBe('false');
   });
 
   it('lists events using exact API query and response field names', async () => {
