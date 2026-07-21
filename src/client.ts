@@ -6,7 +6,12 @@ import { IntervalsCalendarsResource, type CalendarsResource } from './calendars.
 import { IntervalsHttpError, IntervalsResponseError } from './errors.js';
 import { IntervalsEventsResource, type EventsResource } from './events.js';
 import { IntervalsFoldersResource, type FoldersResource } from './folders.js';
-import type { ResourceRequester, ResourceRequestOptions } from './request.js';
+import type {
+  ResourceRequester,
+  ResourceRequestBaseOptions,
+  ResourceRequestOptions,
+  ResourceVoidRequester,
+} from './request.js';
 import { IntervalsWellnessResource, type WellnessResource } from './wellness.js';
 import { IntervalsWorkoutsResource, type WorkoutsResource } from './workouts.js';
 
@@ -48,6 +53,8 @@ export class IntervalsClient {
     const requestJson: ResourceRequester = <ResponseBody>(
       requestOptions: ResourceRequestOptions<ResponseBody>,
     ) => this.#requestJson<ResponseBody>(requestOptions);
+    const requestVoid: ResourceVoidRequester = (requestOptions) =>
+      this.#requestVoid(requestOptions);
     this.activities = new IntervalsActivitiesResource({
       defaultAthleteId: this.athleteId,
       requestJson,
@@ -75,6 +82,7 @@ export class IntervalsClient {
     this.workouts = new IntervalsWorkoutsResource({
       defaultAthleteId: this.athleteId,
       requestJson,
+      requestVoid,
     });
   }
 
@@ -107,17 +115,21 @@ export class IntervalsClient {
     }
   }
 
-  async #requestText(
-    options: Pick<ResourceRequestOptions<unknown>, 'pathSegments' | 'query' | 'signal'>,
-  ): Promise<{ body: string; url: string }> {
+  async #requestText(options: ResourceRequestBaseOptions): Promise<{ body: string; url: string }> {
     const url = this.#buildUrl(options.pathSegments, options.query);
-    const requestInit: RequestInit = {
-      headers: {
-        Accept: 'application/json',
-        Authorization: this.#authorizationHeader(),
-      },
-      method: 'GET',
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      Authorization: this.#authorizationHeader(),
     };
+    const requestInit: RequestInit = {
+      headers,
+      method: options.method ?? 'GET',
+    };
+
+    if (options.json !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      requestInit.body = JSON.stringify(options.json);
+    }
 
     if (options.signal) {
       requestInit.signal = options.signal;
@@ -136,6 +148,10 @@ export class IntervalsClient {
     }
 
     return { body, url };
+  }
+
+  async #requestVoid(options: ResourceRequestBaseOptions): Promise<void> {
+    await this.#requestText(options);
   }
 
   #authorizationHeader(): string {

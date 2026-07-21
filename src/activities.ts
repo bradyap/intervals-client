@@ -18,6 +18,7 @@ const activityShape = {
   name: z.string().optional(),
   start_date: z.string().optional(),
   start_date_local: z.string().optional(),
+  stream_types: z.array(z.string()).optional(),
   total_elevation_gain: z.number().nullable().optional(),
   type: z.string().optional(),
 };

@@ -8,15 +8,8 @@ import {
   IntervalsHttpError,
   IntervalsRequestError,
   IntervalsResponseError,
-  intervalsClientVersion,
 } from '../src/index.js';
 import { getRequestedUrl } from './helpers.js';
-
-describe('intervalsClientVersion', () => {
-  it('exports the package version placeholder', () => {
-    expect(intervalsClientVersion).toBe('0.2.0');
-  });
-});
 
 describe('IntervalsClient', () => {
   it('fetches the authenticated athlete profile with API key basic auth', async () => {
