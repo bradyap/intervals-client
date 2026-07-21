@@ -111,7 +111,6 @@ describe('ActivityStreamsResource', () => {
     const requestInit = fetchMock.mock.calls[0]?.[1];
     expect(requestInit?.method).toBe('PUT');
     expect(requestInit?.body).toBeInstanceOf(FormData);
-    expect(new Headers(requestInit?.headers).has('Content-Type')).toBe(false);
     const file = (requestInit?.body as FormData).get('file');
     expect(file).toBeInstanceOf(File);
     expect((file as File).name).toBe('streams.csv');

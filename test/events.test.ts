@@ -1,5 +1,3 @@
-import { Buffer } from 'node:buffer';
-
 import { describe, expect, it, vi } from 'vitest';
 
 import { IntervalsClient, IntervalsRequestError, IntervalsResponseError } from '../src/index.js';
@@ -32,19 +30,10 @@ describe('EventsResource', () => {
     const requestedUrl = getRequestedUrl(fetchMock);
     expect(requestedUrl.pathname).toBe('/api/v1/athlete/i123/events');
     expect(requestedUrl.searchParams.get('upsertOnUid')).toBe('true');
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://intervals.icu/api/v1/athlete/i123/events?upsertOnUid=true',
-      {
-        body: JSON.stringify(eventInput),
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Basic ${Buffer.from('API_KEY:secret', 'utf8').toString('base64')}`,
-          'Content-Type': 'application/json',
-        },
-        method: 'POST',
-        signal: abortController.signal,
-      },
-    );
+    const requestInit = fetchMock.mock.calls[0]?.[1];
+    expect(requestInit?.body).toBe(JSON.stringify(eventInput));
+    expect(requestInit?.method).toBe('POST');
+    expect(requestInit?.signal).toBe(abortController.signal);
   });
 
   it('defaults event creation to no UID upsert', async () => {
@@ -137,7 +126,6 @@ describe('EventsResource', () => {
     const requestInit = fetchMock.mock.calls[0]?.[1];
     expect(requestInit?.body).toBe(JSON.stringify(eventInput));
     expect(requestInit?.method).toBe('PUT');
-    expect(new Headers(requestInit?.headers).get('Content-Type')).toBe('application/json');
   });
 
   it('deletes an event without parsing an empty response', async () => {

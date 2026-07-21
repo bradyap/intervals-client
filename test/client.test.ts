@@ -23,6 +23,21 @@ describe('IntervalsClient', () => {
     });
   });
 
+  it('serializes JSON request bodies', async () => {
+    const workout = { name: 'Test Workout' };
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify({ id: 123, ...workout }), { status: 200 }));
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    await client.workouts.create(workout);
+
+    const requestInit = fetchMock.mock.calls[0]?.[1];
+    expect(requestInit?.body).toBe(JSON.stringify(workout));
+    expect(requestInit?.method).toBe('POST');
+    expect(new Headers(requestInit?.headers).get('Content-Type')).toBe('application/json');
+  });
+
   it('normalizes client options and supports per-call athlete overrides and signals', async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
