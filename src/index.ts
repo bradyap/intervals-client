@@ -30,7 +30,15 @@ export type { AthleteProfile, AthleteResource, GetAthleteOptions } from './athle
 export type { Calendar, CalendarsResource, ListCalendarsOptions } from './calendars.js';
 export { IntervalsClient, type IntervalsClientOptions } from './client.js';
 export type { DateRange, IsoDateString } from './dates.js';
-export { IntervalsHttpError, IntervalsRequestError, IntervalsResponseError } from './errors.js';
+export {
+  IntervalsAbortError,
+  IntervalsConfigurationError,
+  IntervalsError,
+  IntervalsHttpError,
+  IntervalsNetworkError,
+  IntervalsRequestError,
+  IntervalsResponseError,
+} from './errors.js';
 export type {
   CalendarEvent,
   CalendarEventWriteInput,

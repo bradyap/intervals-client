@@ -1,4 +1,32 @@
-export class IntervalsHttpError extends Error {
+export class IntervalsError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'IntervalsError';
+  }
+}
+
+export class IntervalsAbortError extends IntervalsError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'IntervalsAbortError';
+  }
+}
+
+export class IntervalsConfigurationError extends IntervalsError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'IntervalsConfigurationError';
+  }
+}
+
+export class IntervalsNetworkError extends IntervalsError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'IntervalsNetworkError';
+  }
+}
+
+export class IntervalsHttpError extends IntervalsError {
   readonly body: string;
   readonly status: number;
   readonly statusText: string;
@@ -17,14 +45,14 @@ export class IntervalsHttpError extends Error {
   }
 }
 
-export class IntervalsRequestError extends Error {
-  constructor(message: string) {
-    super(message);
+export class IntervalsRequestError extends IntervalsError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
     this.name = 'IntervalsRequestError';
   }
 }
 
-export class IntervalsResponseError extends Error {
+export class IntervalsResponseError extends IntervalsError {
   readonly body: string;
   readonly url: string;
 
