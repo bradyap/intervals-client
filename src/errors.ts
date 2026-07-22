@@ -62,7 +62,7 @@ export class IntervalsHttpError extends IntervalsError {
     this.body = options.body;
     Object.defineProperty(this, 'body', { enumerable: false });
     this.headers = normalizeHeaders(options.headers);
-    Object.defineProperty(this, 'headers', { writable: false });
+    Object.defineProperty(this, 'headers', { configurable: false, writable: false });
     this.method = options.method;
     this.rateLimitLimit = this.headers['x-ratelimit-limit'];
     this.rateLimitRemaining = this.headers['x-ratelimit-remaining'];
@@ -78,12 +78,25 @@ function normalizeHeaders(
 ): Readonly<Record<string, string | undefined>> {
   const normalized = Object.fromEntries(
     Object.entries(headers)
-      .filter((entry): entry is [string, string] => entry[1] !== undefined)
+      .filter(
+        (entry): entry is [string, string] =>
+          entry[1] !== undefined && !sensitiveHeaderNames.has(entry[0].toLowerCase()),
+      )
       .map(([name, value]) => [name.toLowerCase(), value]),
   );
 
   return Object.freeze(normalized);
 }
+
+const sensitiveHeaderNames = new Set([
+  'authorization',
+  'cookie',
+  'proxy-authorization',
+  'set-cookie',
+  'set-cookie2',
+  'x-api-key',
+  'x-auth-token',
+]);
 
 export class IntervalsRequestError extends IntervalsError {
   constructor(message: string, options?: ErrorOptions) {

@@ -59,6 +59,8 @@ describe('Intervals errors', () => {
   it('normalizes and protects HTTP header metadata at construction', () => {
     const sourceHeaders: Record<string, string> = {
       ['__proto__']: 'reserved',
+      Authorization: 'Bearer response-secret',
+      'Set-Cookie': 'session=response-secret',
       'X-Custom': 'original',
       'X-RateLimit-Limit': '50',
     };
@@ -80,6 +82,8 @@ describe('Intervals errors', () => {
     expect(error.rateLimitLimit).toBe('50');
     expect(error.rateLimitRemaining).toBeUndefined();
     expect(error.rateLimitReset).toBeUndefined();
+    expect(JSON.stringify(error)).not.toContain('response-secret');
+    expect(Reflect.deleteProperty(error, 'headers')).toBe(false);
     expect(() => {
       (error as { headers: Record<string, string> }).headers = {};
     }).toThrow(TypeError);

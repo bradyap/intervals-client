@@ -348,6 +348,12 @@ function normalizeAuthorization(value: unknown): string {
   if (auth.kind === 'bearer') {
     const accessToken = normalizeRequiredConfigurationString('auth.accessToken', auth.accessToken);
 
+    if (!/^[\u0021-\u007e]+$/u.test(accessToken)) {
+      throw new IntervalsConfigurationError(
+        'auth.accessToken must contain only visible ASCII characters without spaces',
+      );
+    }
+
     return `Bearer ${accessToken}`;
   }
 
@@ -371,9 +377,17 @@ function normalizeBaseUrl(value: unknown): string {
     value === undefined ? defaultBaseUrl : normalizeRequiredConfigurationString('baseUrl', value);
   let parsedUrl: URL;
 
+  if (hasApparentUrlCredentials(baseUrl)) {
+    throw new IntervalsConfigurationError('baseUrl must not include credentials');
+  }
+
   try {
     parsedUrl = new URL(baseUrl);
   } catch (cause) {
+    if (baseUrl.includes('@')) {
+      throw new IntervalsConfigurationError('baseUrl must not include credentials');
+    }
+
     throw new IntervalsConfigurationError('baseUrl must be a valid absolute URL', { cause });
   }
 
@@ -390,6 +404,12 @@ function normalizeBaseUrl(value: unknown): string {
   }
 
   return parsedUrl.toString().replace(/\/+$/, '');
+}
+
+function hasApparentUrlCredentials(value: string): boolean {
+  const authority = /^[a-z][a-z\d+.-]*:(?:\/\/)?([^/?#\\]*)/iu.exec(value)?.[1];
+
+  return authority?.includes('@') ?? false;
 }
 
 function normalizeFetch(value: unknown): typeof fetch {

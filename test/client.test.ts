@@ -111,6 +111,9 @@ describe('IntervalsClient', () => {
       { auth: { kind: 'bearer' } },
       { auth: { kind: 'bearer', accessToken: 123 } },
       { auth: { kind: 'bearer', accessToken: '   ' } },
+      { auth: { kind: 'bearer', accessToken: 'token with space' } },
+      { auth: { kind: 'bearer', accessToken: 'token\r\nmarker' } },
+      { auth: { kind: 'bearer', accessToken: 'token-☃' } },
       { auth: { kind: 'apiKey', apiKey: 'secret' }, athleteId: 123 },
       { auth: { kind: 'apiKey', apiKey: 'secret' }, baseUrl: 'not a URL' },
       { auth: { kind: 'apiKey', apiKey: 'secret' }, baseUrl: 'ftp://example.test/api' },
@@ -126,11 +129,48 @@ describe('IntervalsClient', () => {
       { auth: { kind: 'apiKey', apiKey: 'secret' }, baseUrl: 'https://example.test/api?' },
       { auth: { kind: 'apiKey', apiKey: 'secret' }, baseUrl: 'https://example.test/api#' },
       { auth: { kind: 'apiKey', apiKey: 'secret' }, baseUrl: 'https://example.test/api?#' },
+      { auth: { kind: 'apiKey', apiKey: 'secret' }, baseUrl: 'https://user:password@' },
       { auth: { kind: 'apiKey', apiKey: 'secret' }, fetch: null },
     ];
 
     for (const options of invalidOptions) {
       expect(() => new IntervalsClient(options as never)).toThrow(IntervalsConfigurationError);
+    }
+  });
+
+  it('rejects unsafe credential configuration without retaining its value', () => {
+    const marker = 'private-marker';
+    const captureConfigurationError = (options: IntervalsClientOptions): unknown => {
+      try {
+        return new IntervalsClient(options);
+      } catch (cause) {
+        return cause;
+      }
+    };
+    const errors = [
+      captureConfigurationError({
+        auth: { kind: 'bearer', accessToken: `token\r\n${marker}` },
+      }),
+      ...[
+        `https://user:${marker}@`,
+        `https:\\user:${marker}@`,
+        `https:/user:${marker}@`,
+        `https:///user:${marker}@`,
+      ].map((baseUrl) =>
+        captureConfigurationError({
+          auth: { kind: 'apiKey', apiKey: 'secret' },
+          baseUrl,
+        }),
+      ),
+    ];
+
+    for (const error of errors) {
+      expect(error).toBeInstanceOf(IntervalsConfigurationError);
+      expect(JSON.stringify(error)).not.toContain(marker);
+      expect(String(error)).not.toContain(marker);
+      if (error instanceof IntervalsConfigurationError) {
+        expect(error.cause).toBeUndefined();
+      }
     }
   });
 
@@ -173,6 +213,8 @@ describe('IntervalsClient', () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response('Access denied', {
         headers: {
+          Authorization: 'Bearer response-secret',
+          'Set-Cookie': 'session=response-secret',
           'X-Custom-Header': 'custom value',
           'X-RateLimit-Limit': '100',
           'X-RateLimit-Remaining': '42',
@@ -211,6 +253,9 @@ describe('IntervalsClient', () => {
       url: 'https://intervals.icu/api/v1/athlete/0',
     });
     expect(Object.prototype.propertyIsEnumerable.call(error, 'body')).toBe(false);
+    expect(error.headers).not.toHaveProperty('authorization');
+    expect(error.headers).not.toHaveProperty('set-cookie');
+    expect(JSON.stringify(error)).not.toContain('response-secret');
     expect(Object.isFrozen(error.headers)).toBe(true);
     expect(() => {
       (error.headers as Record<string, string>)['x-new-header'] = 'not allowed';
