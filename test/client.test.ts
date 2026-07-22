@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   IntervalsAbortError,
   IntervalsClient,
+  type IntervalsClientOptions,
+  IntervalsConfigurationError,
   IntervalsHttpError,
   IntervalsNetworkError,
   IntervalsRequestError,
@@ -71,8 +73,60 @@ describe('IntervalsClient', () => {
     expect(requestInit?.signal).toBe(abortController.signal);
   });
 
-  it('rejects an empty API key', () => {
-    expect(() => new IntervalsClient({ apiKey: '   ' })).toThrow(TypeError);
+  it('rejects invalid client configuration with a stable error class', () => {
+    const invalidOptions = [
+      undefined,
+      null,
+      {},
+      { apiKey: 123 },
+      { apiKey: '   ' },
+      { apiKey: 'secret', athleteId: 123 },
+      { apiKey: 'secret', baseUrl: 'not a URL' },
+      { apiKey: 'secret', baseUrl: 'ftp://example.test/api' },
+      { apiKey: 'secret', baseUrl: 'https://user:password@example.test/api' },
+      { apiKey: 'secret', baseUrl: 'https://example.test/api?private=true' },
+      { apiKey: 'secret', baseUrl: 'https://example.test/api#fragment' },
+      { apiKey: 'secret', baseUrl: 'https://example.test/api?' },
+      { apiKey: 'secret', baseUrl: 'https://example.test/api#' },
+      { apiKey: 'secret', baseUrl: 'https://example.test/api?#' },
+      { apiKey: 'secret', fetch: null },
+    ];
+
+    for (const options of invalidOptions) {
+      expect(() => new IntervalsClient(options as never)).toThrow(IntervalsConfigurationError);
+    }
+  });
+
+  it('preserves native causes from client option access and URL parsing', () => {
+    const getterCause = new Error('option getter failed');
+    const options = Object.defineProperty({}, 'apiKey', {
+      get() {
+        throw getterCause;
+      },
+    });
+
+    const getterError = (() => {
+      try {
+        return new IntervalsClient(options as IntervalsClientOptions);
+      } catch (cause) {
+        return cause;
+      }
+    })();
+    const urlError = (() => {
+      try {
+        return new IntervalsClient({ apiKey: 'secret', baseUrl: 'not a URL' });
+      } catch (cause) {
+        return cause;
+      }
+    })();
+
+    expect(getterError).toBeInstanceOf(IntervalsConfigurationError);
+    expect(getterError).toMatchObject({ cause: getterCause });
+    expect(urlError).toBeInstanceOf(IntervalsConfigurationError);
+    if (!(urlError instanceof IntervalsConfigurationError)) {
+      throw new Error('expected an IntervalsConfigurationError');
+    }
+    expect(urlError.cause).toBeInstanceOf(TypeError);
   });
 
   it('throws an IntervalsHttpError for unsuccessful responses', async () => {

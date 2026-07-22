@@ -5,6 +5,7 @@ import { IntervalsAthleteResource, type AthleteResource } from './athlete.js';
 import { IntervalsCalendarsResource, type CalendarsResource } from './calendars.js';
 import {
   IntervalsAbortError,
+  IntervalsConfigurationError,
   IntervalsError,
   IntervalsHttpError,
   IntervalsNetworkError,
@@ -49,59 +50,62 @@ export class IntervalsClient {
   readonly #fetch: typeof fetch;
 
   constructor(options: IntervalsClientOptions) {
-    const apiKey = options.apiKey.trim();
+    try {
+      const normalizedOptions = normalizeClientOptions(options);
+      this.#apiKey = normalizedOptions.apiKey;
+      this.athleteId = normalizedOptions.athleteId;
+      this.baseUrl = normalizedOptions.baseUrl;
+      this.#fetch = normalizedOptions.fetch;
+      const requestJson: ResourceRequester = <ResponseBody>(
+        requestOptions: ResourceRequestOptions<ResponseBody>,
+      ) => this.#requestJson<ResponseBody>(requestOptions);
+      const requestBytes: ResourceBytesRequester = (requestOptions) =>
+        this.#requestBytes(requestOptions);
+      const requestVoid: ResourceVoidRequester = (requestOptions) =>
+        this.#requestVoid(requestOptions);
+      this.activities = new IntervalsActivitiesResource({
+        defaultAthleteId: this.athleteId,
+        requestBytes,
+        requestJson,
+      });
+      this.athlete = new IntervalsAthleteResource({
+        defaultAthleteId: this.athleteId,
+        requestJson,
+      });
+      this.calendars = new IntervalsCalendarsResource({
+        defaultAthleteId: this.athleteId,
+        requestJson,
+      });
+      this.events = new IntervalsEventsResource({
+        defaultAthleteId: this.athleteId,
+        requestJson,
+        requestVoid,
+      });
+      this.folders = new IntervalsFoldersResource({
+        defaultAthleteId: this.athleteId,
+        requestJson,
+        requestVoid,
+      });
+      this.sportSettings = new IntervalsSportSettingsResource({
+        defaultAthleteId: this.athleteId,
+        requestJson,
+      });
+      this.wellness = new IntervalsWellnessResource({
+        defaultAthleteId: this.athleteId,
+        requestJson,
+        requestVoid,
+      });
+      this.workouts = new IntervalsWorkoutsResource({
+        defaultAthleteId: this.athleteId,
+        requestJson,
+      });
+    } catch (cause) {
+      if (cause instanceof IntervalsConfigurationError) {
+        throw cause;
+      }
 
-    if (apiKey.length === 0) {
-      throw new TypeError('apiKey must not be empty');
+      throw new IntervalsConfigurationError('Invalid Intervals client configuration', { cause });
     }
-
-    this.#apiKey = apiKey;
-    this.athleteId = normalizeOptionalString(options.athleteId) ?? defaultAthleteId;
-    this.baseUrl = normalizeBaseUrl(options.baseUrl?.trim() ?? defaultBaseUrl);
-    this.#fetch = options.fetch ?? fetch;
-    const requestJson: ResourceRequester = <ResponseBody>(
-      requestOptions: ResourceRequestOptions<ResponseBody>,
-    ) => this.#requestJson<ResponseBody>(requestOptions);
-    const requestBytes: ResourceBytesRequester = (requestOptions) =>
-      this.#requestBytes(requestOptions);
-    const requestVoid: ResourceVoidRequester = (requestOptions) =>
-      this.#requestVoid(requestOptions);
-    this.activities = new IntervalsActivitiesResource({
-      defaultAthleteId: this.athleteId,
-      requestBytes,
-      requestJson,
-    });
-    this.athlete = new IntervalsAthleteResource({
-      defaultAthleteId: this.athleteId,
-      requestJson,
-    });
-    this.calendars = new IntervalsCalendarsResource({
-      defaultAthleteId: this.athleteId,
-      requestJson,
-    });
-    this.events = new IntervalsEventsResource({
-      defaultAthleteId: this.athleteId,
-      requestJson,
-      requestVoid,
-    });
-    this.folders = new IntervalsFoldersResource({
-      defaultAthleteId: this.athleteId,
-      requestJson,
-      requestVoid,
-    });
-    this.sportSettings = new IntervalsSportSettingsResource({
-      defaultAthleteId: this.athleteId,
-      requestJson,
-    });
-    this.wellness = new IntervalsWellnessResource({
-      defaultAthleteId: this.athleteId,
-      requestJson,
-      requestVoid,
-    });
-    this.workouts = new IntervalsWorkoutsResource({
-      defaultAthleteId: this.athleteId,
-      requestJson,
-    });
   }
 
   async #requestJson<ResponseBody>(
@@ -275,12 +279,80 @@ function hasAbortErrorName(value: unknown): boolean {
   }
 }
 
-function normalizeBaseUrl(baseUrl: string): string {
-  return baseUrl.replace(/\/+$/, '');
+interface NormalizedClientOptions {
+  apiKey: string;
+  athleteId: string;
+  baseUrl: string;
+  fetch: typeof fetch;
 }
 
-function normalizeOptionalString(value: string | undefined): string | undefined {
-  const trimmedValue = value?.trim();
+function normalizeClientOptions(options: unknown): NormalizedClientOptions {
+  if (typeof options !== 'object' || options === null) {
+    throw new IntervalsConfigurationError('Client options must be an object');
+  }
 
-  return trimmedValue && trimmedValue.length > 0 ? trimmedValue : undefined;
+  const values = options as unknown as Record<string, unknown>;
+
+  return {
+    apiKey: normalizeRequiredConfigurationString('apiKey', values.apiKey),
+    athleteId: normalizeAthleteId(values.athleteId),
+    baseUrl: normalizeBaseUrl(values.baseUrl),
+    fetch: normalizeFetch(values.fetch),
+  };
+}
+
+function normalizeAthleteId(value: unknown): string {
+  if (value === undefined) {
+    return defaultAthleteId;
+  }
+
+  if (typeof value !== 'string') {
+    throw new IntervalsConfigurationError('athleteId must be a string');
+  }
+
+  return value.trim() || defaultAthleteId;
+}
+
+function normalizeBaseUrl(value: unknown): string {
+  const baseUrl =
+    value === undefined ? defaultBaseUrl : normalizeRequiredConfigurationString('baseUrl', value);
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(baseUrl);
+  } catch (cause) {
+    throw new IntervalsConfigurationError('baseUrl must be a valid absolute URL', { cause });
+  }
+
+  if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+    throw new IntervalsConfigurationError('baseUrl must use http or https');
+  }
+
+  if (parsedUrl.username || parsedUrl.password) {
+    throw new IntervalsConfigurationError('baseUrl must not include credentials');
+  }
+
+  if (baseUrl.includes('?') || baseUrl.includes('#')) {
+    throw new IntervalsConfigurationError('baseUrl must not include a query or fragment');
+  }
+
+  return parsedUrl.toString().replace(/\/+$/, '');
+}
+
+function normalizeFetch(value: unknown): typeof fetch {
+  const fetchImplementation = value === undefined ? globalThis.fetch : value;
+
+  if (typeof fetchImplementation !== 'function') {
+    throw new IntervalsConfigurationError('fetch must be a function');
+  }
+
+  return fetchImplementation as typeof fetch;
+}
+
+function normalizeRequiredConfigurationString(fieldName: string, value: unknown): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new IntervalsConfigurationError(`${fieldName} must be a non-empty string`);
+  }
+
+  return value.trim();
 }
