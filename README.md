@@ -18,6 +18,12 @@ npm install github:bradyap/intervals-client#main
 npm install github:bradyap/intervals-client#0123456789abcdef0123456789abcdef01234567
 ```
 
+## Development
+
+After `npm install`, run `npm run check` for type-checking, linting, formatting, tests, build,
+and the installed-package consumer smoke. To run only that final smoke, build first and then run
+`npm run package:smoke`.
+
 ## Authentication and client options
 
 Authentication is required and discriminated by `kind`. For a personal API key, the client sends
