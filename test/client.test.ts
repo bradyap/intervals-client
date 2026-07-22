@@ -2,7 +2,14 @@ import { Buffer } from 'node:buffer';
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { IntervalsClient, IntervalsHttpError, IntervalsResponseError } from '../src/index.js';
+import {
+  IntervalsAbortError,
+  IntervalsClient,
+  IntervalsHttpError,
+  IntervalsNetworkError,
+  IntervalsRequestError,
+  IntervalsResponseError,
+} from '../src/index.js';
 
 describe('IntervalsClient', () => {
   it('uses API-key basic auth and the authenticated athlete by default', async () => {
@@ -87,6 +94,137 @@ describe('IntervalsClient', () => {
       url: 'https://intervals.icu/api/v1/athlete/0',
     });
     expect(Object.prototype.propertyIsEnumerable.call(error, 'body')).toBe(false);
+  });
+
+  it('normalizes fetch failures while preserving their cause and request metadata', async () => {
+    const cause = new TypeError('fetch failed');
+    const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(cause);
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    const error = await client.workouts
+      .create({ name: 'Workout' })
+      .catch((failure: unknown) => failure);
+
+    expect(error).toBeInstanceOf(IntervalsNetworkError);
+    expect(error).toMatchObject({
+      cause,
+      method: 'POST',
+      url: 'https://intervals.icu/api/v1/athlete/0/workouts',
+    });
+  });
+
+  it('keeps abort failures distinct from other network failures', async () => {
+    const cause = new DOMException('request aborted', 'AbortError');
+    const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(cause);
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    const error = await client.athlete.get().catch((failure: unknown) => failure);
+
+    expect(error).toBeInstanceOf(IntervalsAbortError);
+    expect(error).not.toBeInstanceOf(IntervalsNetworkError);
+    expect(error).toMatchObject({
+      cause,
+      method: 'GET',
+      url: 'https://intervals.icu/api/v1/athlete/0',
+    });
+  });
+
+  it('does not start a request with an already aborted signal', async () => {
+    const fetchMock = vi.fn<typeof fetch>();
+    const abortController = new AbortController();
+    const abortCause = new Error('cancelled');
+    abortController.abort(abortCause);
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    await expect(client.athlete.get({ signal: abortController.signal })).rejects.toMatchObject({
+      cause: abortCause,
+      method: 'GET',
+      name: 'IntervalsAbortError',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('normalizes response body read failures for JSON, bytes, and void responses', async () => {
+    const textCause = new TypeError('text read failed');
+    const bytesCause = new TypeError('bytes read failed');
+    const voidCause = new TypeError('void read failed');
+    const textResponse = new Response('{}');
+    const bytesResponse = new Response(new Uint8Array([1]));
+    const voidResponse = new Response(null, { status: 204 });
+    vi.spyOn(textResponse, 'text').mockRejectedValue(textCause);
+    vi.spyOn(bytesResponse, 'arrayBuffer').mockRejectedValue(bytesCause);
+    vi.spyOn(voidResponse, 'arrayBuffer').mockRejectedValue(voidCause);
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(textResponse)
+      .mockResolvedValueOnce(bytesResponse)
+      .mockResolvedValueOnce(voidResponse);
+    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+
+    const textError = await client.athlete.get().catch((failure: unknown) => failure);
+    expect(textError).toBeInstanceOf(IntervalsNetworkError);
+    expect(textError).toMatchObject({
+      cause: textCause,
+      method: 'GET',
+      url: 'https://intervals.icu/api/v1/athlete/0',
+    });
+    await expect(client.activities.file.get('activity-1')).rejects.toMatchObject({
+      cause: bytesCause,
+      method: 'GET',
+      name: 'IntervalsNetworkError',
+    });
+    await expect(client.events.delete(1)).rejects.toMatchObject({
+      cause: voidCause,
+      method: 'DELETE',
+      name: 'IntervalsNetworkError',
+    });
+  });
+
+  it('normalizes an aborted response body read as an abort failure', async () => {
+    const cause = new DOMException('body read aborted', 'AbortError');
+    const response = new Response('{}');
+    const abortController = new AbortController();
+    vi.spyOn(response, 'text').mockImplementation(() => {
+      abortController.abort(cause);
+      return Promise.reject(cause);
+    });
+    const client = new IntervalsClient({
+      apiKey: 'secret',
+      fetch: vi.fn<typeof fetch>().mockResolvedValue(response),
+    });
+
+    await expect(client.athlete.get({ signal: abortController.signal })).rejects.toMatchObject({
+      cause,
+      method: 'GET',
+      name: 'IntervalsAbortError',
+      url: 'https://intervals.icu/api/v1/athlete/0',
+    });
+  });
+
+  it('normalizes failed reads of unsuccessful response bodies as network failures', async () => {
+    const cause = new TypeError('error body read failed');
+    const response = new Response('failure', { status: 500 });
+    vi.spyOn(response, 'text').mockRejectedValue(cause);
+    const client = new IntervalsClient({
+      apiKey: 'secret',
+      fetch: vi.fn<typeof fetch>().mockResolvedValue(response),
+    });
+
+    await expect(client.athlete.get()).rejects.toMatchObject({
+      cause,
+      method: 'GET',
+      name: 'IntervalsNetworkError',
+    });
+  });
+
+  it('rethrows existing Intervals errors unchanged', async () => {
+    const expected = new IntervalsRequestError('already normalized');
+    const client = new IntervalsClient({
+      apiKey: 'secret',
+      fetch: vi.fn<typeof fetch>().mockRejectedValue(expected),
+    });
+
+    await expect(client.athlete.get()).rejects.toBe(expected);
   });
 
   it('wraps malformed JSON in an IntervalsResponseError', async () => {

@@ -14,7 +14,7 @@ describe('Intervals errors', () => {
   it('exposes a common base error with distinct failure classes', () => {
     const cause = new Error('native failure');
     const errors = [
-      new IntervalsAbortError('aborted', { cause }),
+      new IntervalsAbortError({ cause, method: 'GET', url: 'https://example.test' }),
       new IntervalsConfigurationError('invalid configuration', { cause }),
       new IntervalsHttpError({
         body: '',
@@ -22,7 +22,7 @@ describe('Intervals errors', () => {
         statusText: '',
         url: 'https://example.test',
       }),
-      new IntervalsNetworkError('network failure', { cause }),
+      new IntervalsNetworkError({ cause, method: 'GET', url: 'https://example.test' }),
       new IntervalsRequestError('invalid request', { cause }),
       new IntervalsResponseError({
         body: '',

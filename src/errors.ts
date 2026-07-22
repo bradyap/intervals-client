@@ -6,9 +6,14 @@ export class IntervalsError extends Error {
 }
 
 export class IntervalsAbortError extends IntervalsError {
-  constructor(message: string, options?: ErrorOptions) {
-    super(message, options);
+  readonly method: string;
+  readonly url: string;
+
+  constructor(options: { cause: unknown; method: string; url: string }) {
+    super('Intervals.icu request was aborted', { cause: options.cause });
     this.name = 'IntervalsAbortError';
+    this.method = options.method;
+    this.url = options.url;
   }
 }
 
@@ -20,9 +25,14 @@ export class IntervalsConfigurationError extends IntervalsError {
 }
 
 export class IntervalsNetworkError extends IntervalsError {
-  constructor(message: string, options?: ErrorOptions) {
-    super(message, options);
+  readonly method: string;
+  readonly url: string;
+
+  constructor(options: { cause: unknown; method: string; url: string }) {
+    super('Intervals.icu network request failed', { cause: options.cause });
     this.name = 'IntervalsNetworkError';
+    this.method = options.method;
+    this.url = options.url;
   }
 }
 

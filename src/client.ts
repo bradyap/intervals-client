@@ -3,7 +3,13 @@ import { Buffer } from 'node:buffer';
 import { IntervalsActivitiesResource, type ActivitiesResource } from './activities.js';
 import { IntervalsAthleteResource, type AthleteResource } from './athlete.js';
 import { IntervalsCalendarsResource, type CalendarsResource } from './calendars.js';
-import { IntervalsHttpError, IntervalsResponseError } from './errors.js';
+import {
+  IntervalsAbortError,
+  IntervalsError,
+  IntervalsHttpError,
+  IntervalsNetworkError,
+  IntervalsResponseError,
+} from './errors.js';
 import { IntervalsEventsResource, type EventsResource } from './events.js';
 import { IntervalsFoldersResource, type FoldersResource } from './folders.js';
 import type {
@@ -118,6 +124,10 @@ export class IntervalsClient {
     try {
       return options.parse(parsedBody);
     } catch (cause) {
+      if (cause instanceof IntervalsError) {
+        throw cause;
+      }
+
       throw new IntervalsResponseError({
         body,
         cause,
@@ -128,28 +138,27 @@ export class IntervalsClient {
   }
 
   async #requestBytes(options: ResourceRequestBaseOptions): Promise<Uint8Array> {
-    const { response } = await this.#requestResponse(options);
+    const context = await this.#requestResponse(options);
 
-    return new Uint8Array(await response.arrayBuffer());
+    return new Uint8Array(await this.#readArrayBuffer(context));
   }
 
   async #requestText(options: ResourceRequestBaseOptions): Promise<{ body: string; url: string }> {
-    const { response, url } = await this.#requestResponse(options);
+    const context = await this.#requestResponse(options);
 
-    return { body: await response.text(), url };
+    return { body: await this.#readText(context), url: context.url };
   }
 
-  async #requestResponse(
-    options: ResourceRequestBaseOptions,
-  ): Promise<{ response: Response; url: string }> {
+  async #requestResponse(options: ResourceRequestBaseOptions): Promise<RequestResponseContext> {
     const url = this.#buildUrl(options.pathSegments, options.query);
+    const method = options.method ?? 'GET';
     const headers: Record<string, string> = {
       Accept: options.accept ?? 'application/json',
       Authorization: this.#authorizationHeader(),
     };
     const requestInit: RequestInit = {
       headers,
-      method: options.method ?? 'GET',
+      method,
     };
 
     if (options.json !== undefined) {
@@ -163,9 +172,21 @@ export class IntervalsClient {
       requestInit.signal = options.signal;
     }
 
-    const response = await this.#fetch(url, requestInit);
+    if (options.signal?.aborted) {
+      throw new IntervalsAbortError({ cause: options.signal.reason, method, url });
+    }
+
+    let response: Response;
+
+    try {
+      response = await this.#fetch(url, requestInit);
+    } catch (cause) {
+      this.#throwTransportError(cause, { method, signal: options.signal, url });
+    }
+
+    const context = { method, response, signal: options.signal, url };
     if (!response.ok) {
-      const body = await response.text();
+      const body = await this.#readText(context);
 
       throw new IntervalsHttpError({
         body,
@@ -175,13 +196,43 @@ export class IntervalsClient {
       });
     }
 
-    return { response, url };
+    return context;
   }
 
   async #requestVoid(options: ResourceRequestBaseOptions): Promise<void> {
-    const { response } = await this.#requestResponse(options);
+    const context = await this.#requestResponse(options);
 
-    await response.arrayBuffer();
+    await this.#readArrayBuffer(context);
+  }
+
+  async #readArrayBuffer(context: RequestResponseContext): Promise<ArrayBuffer> {
+    try {
+      return await context.response.arrayBuffer();
+    } catch (cause) {
+      this.#throwTransportError(cause, context);
+    }
+  }
+
+  async #readText(context: RequestResponseContext): Promise<string> {
+    try {
+      return await context.response.text();
+    } catch (cause) {
+      this.#throwTransportError(cause, context);
+    }
+  }
+
+  #throwTransportError(cause: unknown, context: RequestContext): never {
+    if (cause instanceof IntervalsError) {
+      throw cause;
+    }
+
+    const options = { cause, method: context.method, url: context.url };
+
+    if (context.signal?.aborted || hasAbortErrorName(cause)) {
+      throw new IntervalsAbortError(options);
+    }
+
+    throw new IntervalsNetworkError(options);
   }
 
   #authorizationHeader(): string {
@@ -197,6 +248,28 @@ export class IntervalsClient {
     }
 
     return url.toString();
+  }
+}
+
+interface RequestContext {
+  method: string;
+  signal?: AbortSignal;
+  url: string;
+}
+
+interface RequestResponseContext extends RequestContext {
+  response: Response;
+}
+
+function hasAbortErrorName(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  try {
+    return 'name' in value && value.name === 'AbortError';
+  } catch {
+    return false;
   }
 }
 
