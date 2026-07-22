@@ -29,7 +29,7 @@ function readJsonFixture(filename: string): unknown {
 }
 
 describe('sanitized response fixtures', () => {
-  it('parses each public response family without dropping unknown fields or translating casing', () => {
+  it('parses each captured response family without dropping unknown fields or translating casing', () => {
     const fixtures = publicResponsesSchema.parse(
       readJsonFixture('sanitized-public-responses.json'),
     );
