@@ -34,7 +34,8 @@
     "lint": "eslint . --max-warnings=0",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm test && npm run build"
+    "package:smoke": "node scripts/package-consumer-smoke.mjs",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test && npm run build && npm run package:smoke"
   },
   "dependencies": {
     "zod": "4.4.3"
