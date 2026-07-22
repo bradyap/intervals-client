@@ -1,0 +1,60 @@
+{
+  "athlete": {
+    "id": "athlete-fixture",
+    "name": "sanitized",
+    "fixture_unknown": true
+  },
+  "activities": [
+    {
+      "id": "activity-fixture",
+      "distance": 0,
+      "name": "sanitized",
+      "start_date": "2026-07-01T00:00:00Z",
+      "start_date_local": "2026-07-01T00:00:00",
+      "type": "sanitized",
+      "fixture_unknown": true
+    }
+  ],
+  "activity": {
+    "id": "activity-fixture",
+    "name": "sanitized",
+    "start_date_local": "2026-07-01T00:00:00",
+    "type": "sanitized",
+    "fixture_unknown": true
+  },
+  "streams": [
+    {
+      "type": "sanitized",
+      "data": [0, null],
+      "allNull": false,
+      "fixture_unknown": true
+    }
+  ],
+  "calendars": [
+    {
+      "id": 1,
+      "name": "sanitized",
+      "type": "sanitized",
+      "fixture_unknown": true
+    }
+  ],
+  "events": [
+    {
+      "id": 1,
+      "calendar_id": 1,
+      "category": "sanitized",
+      "name": "sanitized",
+      "start_date_local": "2026-07-01T00:00:00",
+      "fixture_unknown": true
+    }
+  ],
+  "wellness": [
+    {
+      "id": "2026-07-01",
+      "restingHR": 0,
+      "sleepSecs": 0,
+      "weight": 0,
+      "fixture_unknown": true
+    }
+  ]
+}
