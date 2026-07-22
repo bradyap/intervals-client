@@ -9,10 +9,12 @@ import {
   IntervalsError,
   IntervalsHttpError,
   IntervalsNetworkError,
+  IntervalsRequestError,
   IntervalsResponseError,
 } from './errors.js';
 import { IntervalsEventsResource, type EventsResource } from './events.js';
 import { IntervalsFoldersResource, type FoldersResource } from './folders.js';
+import { withRequestErrorBoundary } from './resources.js';
 import type {
   ResourceRequester,
   ResourceBytesRequester,
@@ -157,30 +159,54 @@ export class IntervalsClient {
   }
 
   async #requestResponse(options: ResourceRequestBaseOptions): Promise<RequestResponseContext> {
-    const url = this.#buildUrl(options.pathSegments, options.query);
-    const method = options.method ?? 'GET';
-    const headers: Record<string, string> = {
-      Accept: options.accept ?? 'application/json',
-      Authorization: this.#authorizationHeader(),
-    };
-    const requestInit: RequestInit = {
-      headers,
-      method,
-    };
+    const { abortReason, aborted, method, requestInit, signal, url } = withRequestErrorBoundary(
+      () => {
+        const requestUrl = this.#buildUrl(options.pathSegments, options.query);
+        const requestMethod = options.method ?? 'GET';
+        const requestSignal = options.signal;
 
-    if (options.json !== undefined) {
-      headers['Content-Type'] = 'application/json';
-      requestInit.body = JSON.stringify(options.json);
-    } else if (options.body !== undefined) {
-      requestInit.body = options.body;
-    }
+        if (requestSignal !== undefined && !(requestSignal instanceof AbortSignal)) {
+          throw new IntervalsRequestError('signal must be an AbortSignal');
+        }
 
-    if (options.signal) {
-      requestInit.signal = options.signal;
-    }
+        const headers: Record<string, string> = {
+          Accept: options.accept ?? 'application/json',
+          Authorization: this.#authorizationHeader(),
+        };
+        const init: RequestInit = {
+          headers,
+          method: requestMethod,
+        };
 
-    if (options.signal?.aborted) {
-      throw new IntervalsAbortError({ cause: options.signal.reason, method, url });
+        if (options.json !== undefined) {
+          headers['Content-Type'] = 'application/json';
+          init.body = JSON.stringify(options.json);
+        } else if (options.body !== undefined) {
+          init.body = options.body;
+        }
+
+        if (requestSignal) {
+          init.signal = requestSignal;
+        }
+
+        const requestAborted = requestSignal?.aborted ?? false;
+        const requestAbortReason: unknown = requestAborted
+          ? (requestSignal?.reason as unknown)
+          : undefined;
+
+        return {
+          abortReason: requestAbortReason,
+          aborted: requestAborted,
+          method: requestMethod,
+          requestInit: init,
+          signal: requestSignal,
+          url: requestUrl,
+        };
+      },
+    );
+
+    if (aborted) {
+      throw new IntervalsAbortError({ cause: abortReason, method, url });
     }
 
     let response: Response;
@@ -188,10 +214,10 @@ export class IntervalsClient {
     try {
       response = await this.#fetch(url, requestInit);
     } catch (cause) {
-      this.#throwTransportError(cause, { method, signal: options.signal, url });
+      this.#throwTransportError(cause, { method, signal, url });
     }
 
-    const context = { method, response, signal: options.signal, url };
+    const context = { method, response, signal, url };
     if (!response.ok) {
       const body = await this.#readText(context);
 
@@ -237,7 +263,9 @@ export class IntervalsClient {
 
     const options = { cause, method: context.method, url: context.url };
 
-    if (context.signal?.aborted || hasAbortErrorName(cause)) {
+    const signalAborted = withRequestErrorBoundary(() => context.signal?.aborted ?? false);
+
+    if (signalAborted || hasAbortErrorName(cause)) {
       throw new IntervalsAbortError(options);
     }
 

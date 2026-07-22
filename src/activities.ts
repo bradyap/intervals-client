@@ -14,7 +14,12 @@ import {
 } from './activity-files.js';
 import { validateDateRange, type DateRange } from './dates.js';
 import type { ResourceBytesRequester, ResourceRequester } from './request.js';
-import { resolveAthleteId, validateRequiredString, validateResourceId } from './resources.js';
+import {
+  resolveAthleteId,
+  validateRequiredString,
+  validateResourceId,
+  withRequestErrorBoundary,
+} from './resources.js';
 
 const activityShape = {
   description: z.string().nullable().optional(),
@@ -135,45 +140,52 @@ export class IntervalsActivitiesResource implements ActivitiesResource {
   }
 
   async delete(activityId: string, options: MutateActivityOptions = {}): Promise<ActivityId> {
-    return this.#requestJson({
-      pathSegments: ['activity', validateRequiredString('activityId', activityId)],
-      method: 'DELETE',
-      signal: options.signal,
-      parse: parseActivityId,
-      validationMessage: 'Intervals.icu response did not match the expected activity id shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: ['activity', validateRequiredString('activityId', activityId)],
+        method: 'DELETE',
+        signal: options.signal,
+        parse: parseActivityId,
+        validationMessage: 'Intervals.icu response did not match the expected activity id shape',
+      }),
+    );
   }
 
   async get(activityId: string, options: GetActivityOptions = {}): Promise<ActivityDetail> {
-    const normalizedActivityId = validateRequiredString('activityId', activityId);
-    const query = options.intervals ? new URLSearchParams([['intervals', 'true']]) : undefined;
+    return withRequestErrorBoundary(() => {
+      const normalizedActivityId = validateRequiredString('activityId', activityId);
+      const query = options.intervals ? new URLSearchParams([['intervals', 'true']]) : undefined;
 
-    return this.#requestJson({
-      pathSegments: ['activity', normalizedActivityId],
-      query,
-      signal: options.signal,
-      parse: parseActivityDetail,
-      validationMessage: 'Intervals.icu response did not match the expected activity detail shape',
+      return this.#requestJson({
+        pathSegments: ['activity', normalizedActivityId],
+        query,
+        signal: options.signal,
+        parse: parseActivityDetail,
+        validationMessage:
+          'Intervals.icu response did not match the expected activity detail shape',
+      });
     });
   }
 
   async list(options: ListActivitiesOptions): Promise<ActivitySummary[]> {
-    const dateRange = validateDateRange(options);
+    return withRequestErrorBoundary(() => {
+      const dateRange = validateDateRange(options);
 
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'activities',
-      ],
-      query: new URLSearchParams([
-        ['oldest', dateRange.oldest],
-        ['newest', dateRange.newest],
-      ]),
-      signal: options.signal,
-      parse: parseActivitySummaries,
-      validationMessage:
-        'Intervals.icu response did not match the expected activity summaries shape',
+      return this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'activities',
+        ],
+        query: new URLSearchParams([
+          ['oldest', dateRange.oldest],
+          ['newest', dateRange.newest],
+        ]),
+        signal: options.signal,
+        parse: parseActivitySummaries,
+        validationMessage:
+          'Intervals.icu response did not match the expected activity summaries shape',
+      });
     });
   }
 
@@ -182,48 +194,57 @@ export class IntervalsActivitiesResource implements ActivitiesResource {
     activity: ActivityUpdateInput,
     options: MutateActivityOptions = {},
   ): Promise<ActivityDetail> {
-    return this.#requestJson({
-      pathSegments: ['activity', validateRequiredString('activityId', activityId)],
-      method: 'PUT',
-      json: activity,
-      signal: options.signal,
-      parse: parseActivityDetail,
-      validationMessage: 'Intervals.icu response did not match the expected activity detail shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: ['activity', validateRequiredString('activityId', activityId)],
+        method: 'PUT',
+        json: activity,
+        signal: options.signal,
+        parse: parseActivityDetail,
+        validationMessage:
+          'Intervals.icu response did not match the expected activity detail shape',
+      }),
+    );
   }
 
   async upload(file: BinaryInput, options: UploadActivityOptions): Promise<ActivityUploadResult> {
-    const formData = new FormData();
-    const query = new URLSearchParams();
-    formData.append('file', toBlob(file), validateRequiredString('filename', options.filename));
+    return withRequestErrorBoundary(() => {
+      const formData = new FormData();
+      const query = new URLSearchParams();
+      formData.append('file', toBlob(file), validateRequiredString('filename', options.filename));
 
-    for (const [name, value] of [
-      ['name', options.name],
-      ['description', options.description],
-      ['device_name', options.device_name],
-      ['external_id', options.external_id],
-    ] as const) {
-      if (value !== undefined) {
-        query.set(name, value);
+      for (const [name, value] of [
+        ['name', options.name],
+        ['description', options.description],
+        ['device_name', options.device_name],
+        ['external_id', options.external_id],
+      ] as const) {
+        if (value !== undefined) {
+          query.set(name, value);
+        }
       }
-    }
 
-    if (options.paired_event_id !== undefined) {
-      query.set('paired_event_id', validateResourceId('paired_event_id', options.paired_event_id));
-    }
+      if (options.paired_event_id !== undefined) {
+        query.set(
+          'paired_event_id',
+          validateResourceId('paired_event_id', options.paired_event_id),
+        );
+      }
 
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'activities',
-      ],
-      body: formData,
-      method: 'POST',
-      query: query.size > 0 ? query : undefined,
-      signal: options.signal,
-      parse: parseActivityUploadResult,
-      validationMessage: 'Intervals.icu response did not match the expected activity upload shape',
+      return this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'activities',
+        ],
+        body: formData,
+        method: 'POST',
+        query: query.size > 0 ? query : undefined,
+        signal: options.signal,
+        parse: parseActivityUploadResult,
+        validationMessage:
+          'Intervals.icu response did not match the expected activity upload shape',
+      });
     });
   }
 }

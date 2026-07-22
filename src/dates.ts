@@ -9,9 +9,14 @@ export interface DateRange {
   newest: IsoDateString;
 }
 
-export function validateDateRange(range: DateRange): DateRange {
-  const oldest = validateIsoDateString('oldest', range.oldest);
-  const newest = validateIsoDateString('newest', range.newest);
+export function validateDateRange(range: unknown): DateRange {
+  if (typeof range !== 'object' || range === null) {
+    throw new IntervalsRequestError('date range options must be an object');
+  }
+
+  const values = range as Record<string, unknown>;
+  const oldest = validateIsoDateString('oldest', values.oldest);
+  const newest = validateIsoDateString('newest', values.newest);
 
   if (oldest > newest) {
     throw new IntervalsRequestError('oldest must be earlier than or equal to newest');

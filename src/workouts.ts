@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import type { ResourceRequester } from './request.js';
-import { resolveAthleteId, validateResourceId } from './resources.js';
+import { resolveAthleteId, validateResourceId, withRequestErrorBoundary } from './resources.js';
 
 const resourceIdSchema = z.union([z.string(), z.number()]);
 const workoutSchema = z.looseObject({
@@ -73,60 +73,68 @@ export class IntervalsWorkoutsResource implements WorkoutsResource {
   }
 
   async create(workout: WorkoutWriteInput, options: WriteWorkoutOptions = {}): Promise<Workout> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'workouts',
-      ],
-      method: 'POST',
-      json: workout,
-      signal: options.signal,
-      parse: parseWorkout,
-      validationMessage: 'Intervals.icu response did not match the expected workout shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'workouts',
+        ],
+        method: 'POST',
+        json: workout,
+        signal: options.signal,
+        parse: parseWorkout,
+        validationMessage: 'Intervals.icu response did not match the expected workout shape',
+      }),
+    );
   }
 
   async delete(workoutId: WorkoutId, options: WriteWorkoutOptions = {}): Promise<number[]> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'workouts',
-        validateResourceId('workoutId', workoutId),
-      ],
-      method: 'DELETE',
-      signal: options.signal,
-      parse: parseDeletedWorkoutIds,
-      validationMessage: 'Intervals.icu response did not match the expected workout ids shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'workouts',
+          validateResourceId('workoutId', workoutId),
+        ],
+        method: 'DELETE',
+        signal: options.signal,
+        parse: parseDeletedWorkoutIds,
+        validationMessage: 'Intervals.icu response did not match the expected workout ids shape',
+      }),
+    );
   }
 
   async get(workoutId: WorkoutId, options: GetWorkoutOptions = {}): Promise<Workout> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'workouts',
-        validateResourceId('workoutId', workoutId),
-      ],
-      signal: options.signal,
-      parse: parseWorkout,
-      validationMessage: 'Intervals.icu response did not match the expected workout shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'workouts',
+          validateResourceId('workoutId', workoutId),
+        ],
+        signal: options.signal,
+        parse: parseWorkout,
+        validationMessage: 'Intervals.icu response did not match the expected workout shape',
+      }),
+    );
   }
 
   async list(options: ListWorkoutsOptions = {}): Promise<Workout[]> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'workouts',
-      ],
-      signal: options.signal,
-      parse: parseWorkouts,
-      validationMessage: 'Intervals.icu response did not match the expected workouts shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'workouts',
+        ],
+        signal: options.signal,
+        parse: parseWorkouts,
+        validationMessage: 'Intervals.icu response did not match the expected workouts shape',
+      }),
+    );
   }
 
   async update(
@@ -134,19 +142,21 @@ export class IntervalsWorkoutsResource implements WorkoutsResource {
     workout: WorkoutWriteInput,
     options: WriteWorkoutOptions = {},
   ): Promise<Workout> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'workouts',
-        validateResourceId('workoutId', workoutId),
-      ],
-      method: 'PUT',
-      json: workout,
-      signal: options.signal,
-      parse: parseWorkout,
-      validationMessage: 'Intervals.icu response did not match the expected workout shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'workouts',
+          validateResourceId('workoutId', workoutId),
+        ],
+        method: 'PUT',
+        json: workout,
+        signal: options.signal,
+        parse: parseWorkout,
+        validationMessage: 'Intervals.icu response did not match the expected workout shape',
+      }),
+    );
   }
 }
 

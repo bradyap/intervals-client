@@ -2,7 +2,11 @@ import { z } from 'zod';
 
 import { toBlob, type BinaryInput } from './activity-files.js';
 import type { ResourceRequester } from './request.js';
-import { appendStringArrayQuery, validateRequiredString } from './resources.js';
+import {
+  appendStringArrayQuery,
+  validateRequiredString,
+  withRequestErrorBoundary,
+} from './resources.js';
 
 const activityStreamSchema = z.looseObject({
   type: z.string(),
@@ -68,19 +72,22 @@ export class IntervalsActivityStreamsResource implements ActivityStreamsResource
     activityId: string,
     options: GetActivityStreamsOptions = {},
   ): Promise<ActivityStream[]> {
-    const normalizedActivityId = validateRequiredString('activityId', activityId);
-    const query = new URLSearchParams();
+    return withRequestErrorBoundary(() => {
+      const normalizedActivityId = validateRequiredString('activityId', activityId);
+      const query = new URLSearchParams();
 
-    if (options.types !== undefined) {
-      appendStringArrayQuery(query, 'types', options.types);
-    }
+      if (options.types !== undefined) {
+        appendStringArrayQuery(query, 'types', options.types);
+      }
 
-    return this.#requestJson({
-      pathSegments: ['activity', normalizedActivityId, 'streams.json'],
-      query: query.size > 0 ? query : undefined,
-      signal: options.signal,
-      parse: parseActivityStreams,
-      validationMessage: 'Intervals.icu response did not match the expected activity streams shape',
+      return this.#requestJson({
+        pathSegments: ['activity', normalizedActivityId, 'streams.json'],
+        query: query.size > 0 ? query : undefined,
+        signal: options.signal,
+        parse: parseActivityStreams,
+        validationMessage:
+          'Intervals.icu response did not match the expected activity streams shape',
+      });
     });
   }
 
@@ -89,15 +96,17 @@ export class IntervalsActivityStreamsResource implements ActivityStreamsResource
     streams: ActivityStreamWriteInput[],
     options: WriteActivityStreamsOptions = {},
   ): Promise<ActivityStreamsUpdateResult> {
-    return this.#requestJson({
-      pathSegments: ['activity', validateRequiredString('activityId', activityId), 'streams'],
-      method: 'PUT',
-      json: streams,
-      signal: options.signal,
-      parse: parseActivityStreamsUpdateResult,
-      validationMessage:
-        'Intervals.icu response did not match the expected activity streams update shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: ['activity', validateRequiredString('activityId', activityId), 'streams'],
+        method: 'PUT',
+        json: streams,
+        signal: options.signal,
+        parse: parseActivityStreamsUpdateResult,
+        validationMessage:
+          'Intervals.icu response did not match the expected activity streams update shape',
+      }),
+    );
   }
 
   async updateCsv(
@@ -105,17 +114,19 @@ export class IntervalsActivityStreamsResource implements ActivityStreamsResource
     csv: BinaryInput,
     options: WriteActivityStreamsOptions = {},
   ): Promise<ActivityStreamsUpdateResult> {
-    const formData = new FormData();
-    formData.append('file', toBlob(csv), 'streams.csv');
+    return withRequestErrorBoundary(() => {
+      const formData = new FormData();
+      formData.append('file', toBlob(csv), 'streams.csv');
 
-    return this.#requestJson({
-      pathSegments: ['activity', validateRequiredString('activityId', activityId), 'streams.csv'],
-      body: formData,
-      method: 'PUT',
-      signal: options.signal,
-      parse: parseActivityStreamsUpdateResult,
-      validationMessage:
-        'Intervals.icu response did not match the expected activity streams update shape',
+      return this.#requestJson({
+        pathSegments: ['activity', validateRequiredString('activityId', activityId), 'streams.csv'],
+        body: formData,
+        method: 'PUT',
+        signal: options.signal,
+        parse: parseActivityStreamsUpdateResult,
+        validationMessage:
+          'Intervals.icu response did not match the expected activity streams update shape',
+      });
     });
   }
 }

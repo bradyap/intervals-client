@@ -2,7 +2,12 @@ import { z } from 'zod';
 
 import { validateDateRange, type DateRange } from './dates.js';
 import type { ResourceRequester, ResourceVoidRequester } from './request.js';
-import { appendStringArrayQuery, resolveAthleteId, validateResourceId } from './resources.js';
+import {
+  appendStringArrayQuery,
+  resolveAthleteId,
+  validateResourceId,
+  withRequestErrorBoundary,
+} from './resources.js';
 
 const resourceIdSchema = z.union([z.string(), z.number()]);
 const eventSchema = z.looseObject({
@@ -92,77 +97,85 @@ export class IntervalsEventsResource implements EventsResource {
     event: CalendarEventWriteInput,
     options: CreateEventOptions = {},
   ): Promise<CalendarEvent> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'events',
-      ],
-      method: 'POST',
-      json: event,
-      query: new URLSearchParams([['upsertOnUid', String(options.upsertOnUid ?? false)]]),
-      signal: options.signal,
-      parse: parseEvent,
-      validationMessage: 'Intervals.icu response did not match the expected event shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'events',
+        ],
+        method: 'POST',
+        json: event,
+        query: new URLSearchParams([['upsertOnUid', String(options.upsertOnUid ?? false)]]),
+        signal: options.signal,
+        parse: parseEvent,
+        validationMessage: 'Intervals.icu response did not match the expected event shape',
+      }),
+    );
   }
 
   async delete(eventId: EventId, options: WriteEventOptions = {}): Promise<void> {
-    await this.#requestVoid({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'events',
-        validateResourceId('eventId', eventId),
-      ],
-      method: 'DELETE',
-      signal: options.signal,
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestVoid({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'events',
+          validateResourceId('eventId', eventId),
+        ],
+        method: 'DELETE',
+        signal: options.signal,
+      }),
+    );
   }
 
   async get(eventId: EventId, options: GetEventOptions = {}): Promise<CalendarEvent> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'events',
-        validateResourceId('eventId', eventId),
-      ],
-      signal: options.signal,
-      parse: parseEvent,
-      validationMessage: 'Intervals.icu response did not match the expected event shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'events',
+          validateResourceId('eventId', eventId),
+        ],
+        signal: options.signal,
+        parse: parseEvent,
+        validationMessage: 'Intervals.icu response did not match the expected event shape',
+      }),
+    );
   }
 
   async list(options: ListEventsOptions): Promise<CalendarEvent[]> {
-    const dateRange = validateDateRange(options);
-    const query = new URLSearchParams([
-      ['oldest', dateRange.oldest],
-      ['newest', dateRange.newest],
-    ]);
+    return withRequestErrorBoundary(() => {
+      const dateRange = validateDateRange(options);
+      const query = new URLSearchParams([
+        ['oldest', dateRange.oldest],
+        ['newest', dateRange.newest],
+      ]);
 
-    if (options.calendar_id !== undefined) {
-      query.set('calendar_id', validateResourceId('calendar_id', options.calendar_id));
-    }
+      if (options.calendar_id !== undefined) {
+        query.set('calendar_id', validateResourceId('calendar_id', options.calendar_id));
+      }
 
-    if (options.category !== undefined) {
-      appendStringArrayQuery(query, 'category', options.category);
-    }
+      if (options.category !== undefined) {
+        appendStringArrayQuery(query, 'category', options.category);
+      }
 
-    if (options.resolve !== undefined) {
-      query.set('resolve', String(options.resolve));
-    }
+      if (options.resolve !== undefined) {
+        query.set('resolve', String(options.resolve));
+      }
 
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'events',
-      ],
-      query,
-      signal: options.signal,
-      parse: parseEvents,
-      validationMessage: 'Intervals.icu response did not match the expected events shape',
+      return this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'events',
+        ],
+        query,
+        signal: options.signal,
+        parse: parseEvents,
+        validationMessage: 'Intervals.icu response did not match the expected events shape',
+      });
     });
   }
 
@@ -171,19 +184,21 @@ export class IntervalsEventsResource implements EventsResource {
     event: CalendarEventWriteInput,
     options: WriteEventOptions = {},
   ): Promise<CalendarEvent> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'events',
-        validateResourceId('eventId', eventId),
-      ],
-      method: 'PUT',
-      json: event,
-      signal: options.signal,
-      parse: parseEvent,
-      validationMessage: 'Intervals.icu response did not match the expected event shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'events',
+          validateResourceId('eventId', eventId),
+        ],
+        method: 'PUT',
+        json: event,
+        signal: options.signal,
+        parse: parseEvent,
+        validationMessage: 'Intervals.icu response did not match the expected event shape',
+      }),
+    );
   }
 }
 
