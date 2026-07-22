@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   IntervalsAbortError,
+  type IntervalsAuth,
   IntervalsClient,
   type IntervalsClientOptions,
   IntervalsConfigurationError,
@@ -19,7 +20,10 @@ describe('IntervalsClient', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.athlete.get()).resolves.toEqual(responseBody);
 
@@ -32,12 +36,31 @@ describe('IntervalsClient', () => {
     });
   });
 
+  it('uses a trimmed bearer token without retaining the mutable auth object', async () => {
+    const responseBody = { id: 'i123' };
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
+    const auth: IntervalsAuth = { kind: 'bearer', accessToken: ' bearer-token ' };
+    const client = new IntervalsClient({ auth, fetch: fetchMock });
+    auth.accessToken = 'changed';
+
+    await client.athlete.get();
+
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get('Authorization')).toBe(
+      'Bearer bearer-token',
+    );
+  });
+
   it('serializes JSON request bodies', async () => {
     const workout = { name: 'Test Workout' };
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify({ id: 123, ...workout }), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await client.workouts.create(workout);
 
@@ -53,7 +76,7 @@ describe('IntervalsClient', () => {
       .mockResolvedValue(new Response(JSON.stringify({ id: 'i456' }), { status: 200 }));
     const abortController = new AbortController();
     const client = new IntervalsClient({
-      apiKey: ' secret ',
+      auth: { kind: 'apiKey', apiKey: ' secret ' },
       athleteId: ' i123 ',
       baseUrl: ' https://example.test/api/ ',
       fetch: fetchMock,
@@ -78,18 +101,32 @@ describe('IntervalsClient', () => {
       undefined,
       null,
       {},
-      { apiKey: 123 },
-      { apiKey: '   ' },
-      { apiKey: 'secret', athleteId: 123 },
-      { apiKey: 'secret', baseUrl: 'not a URL' },
-      { apiKey: 'secret', baseUrl: 'ftp://example.test/api' },
-      { apiKey: 'secret', baseUrl: 'https://user:password@example.test/api' },
-      { apiKey: 'secret', baseUrl: 'https://example.test/api?private=true' },
-      { apiKey: 'secret', baseUrl: 'https://example.test/api#fragment' },
-      { apiKey: 'secret', baseUrl: 'https://example.test/api?' },
-      { apiKey: 'secret', baseUrl: 'https://example.test/api#' },
-      { apiKey: 'secret', baseUrl: 'https://example.test/api?#' },
-      { apiKey: 'secret', fetch: null },
+      { apiKey: 'legacy' },
+      { auth: null },
+      { auth: {} },
+      { auth: { kind: 'oauth', accessToken: 'token' } },
+      { auth: { kind: 'apiKey' } },
+      { auth: { kind: 'apiKey', apiKey: 123 } },
+      { auth: { kind: 'apiKey', apiKey: '   ' } },
+      { auth: { kind: 'bearer' } },
+      { auth: { kind: 'bearer', accessToken: 123 } },
+      { auth: { kind: 'bearer', accessToken: '   ' } },
+      { auth: { kind: 'apiKey', apiKey: 'secret' }, athleteId: 123 },
+      { auth: { kind: 'apiKey', apiKey: 'secret' }, baseUrl: 'not a URL' },
+      { auth: { kind: 'apiKey', apiKey: 'secret' }, baseUrl: 'ftp://example.test/api' },
+      {
+        auth: { kind: 'apiKey', apiKey: 'secret' },
+        baseUrl: 'https://user:password@example.test/api',
+      },
+      {
+        auth: { kind: 'apiKey', apiKey: 'secret' },
+        baseUrl: 'https://example.test/api?private=true',
+      },
+      { auth: { kind: 'apiKey', apiKey: 'secret' }, baseUrl: 'https://example.test/api#fragment' },
+      { auth: { kind: 'apiKey', apiKey: 'secret' }, baseUrl: 'https://example.test/api?' },
+      { auth: { kind: 'apiKey', apiKey: 'secret' }, baseUrl: 'https://example.test/api#' },
+      { auth: { kind: 'apiKey', apiKey: 'secret' }, baseUrl: 'https://example.test/api?#' },
+      { auth: { kind: 'apiKey', apiKey: 'secret' }, fetch: null },
     ];
 
     for (const options of invalidOptions) {
@@ -99,7 +136,7 @@ describe('IntervalsClient', () => {
 
   it('preserves native causes from client option access and URL parsing', () => {
     const getterCause = new Error('option getter failed');
-    const options = Object.defineProperty({}, 'apiKey', {
+    const options = Object.defineProperty({}, 'auth', {
       get() {
         throw getterCause;
       },
@@ -114,7 +151,10 @@ describe('IntervalsClient', () => {
     })();
     const urlError = (() => {
       try {
-        return new IntervalsClient({ apiKey: 'secret', baseUrl: 'not a URL' });
+        return new IntervalsClient({
+          auth: { kind: 'apiKey', apiKey: 'secret' },
+          baseUrl: 'not a URL',
+        });
       } catch (cause) {
         return cause;
       }
@@ -142,7 +182,10 @@ describe('IntervalsClient', () => {
         statusText: 'Forbidden',
       }),
     );
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const error = await client.athlete.get().catch((cause: unknown) => cause);
 
@@ -176,7 +219,7 @@ describe('IntervalsClient', () => {
 
   it('reports the non-default request method on HTTP errors', async () => {
     const client = new IntervalsClient({
-      apiKey: 'secret',
+      auth: { kind: 'apiKey', apiKey: 'secret' },
       fetch: vi
         .fn<typeof fetch>()
         .mockResolvedValue(new Response('Conflict', { status: 409, statusText: 'Conflict' })),
@@ -194,7 +237,10 @@ describe('IntervalsClient', () => {
   it('normalizes fetch failures while preserving their cause and request metadata', async () => {
     const cause = new TypeError('fetch failed');
     const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(cause);
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const error = await client.workouts
       .create({ name: 'Workout' })
@@ -211,7 +257,10 @@ describe('IntervalsClient', () => {
   it('keeps abort failures distinct from other network failures', async () => {
     const cause = new DOMException('request aborted', 'AbortError');
     const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(cause);
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const error = await client.athlete.get().catch((failure: unknown) => failure);
 
@@ -229,7 +278,10 @@ describe('IntervalsClient', () => {
     const abortController = new AbortController();
     const abortCause = new Error('cancelled');
     abortController.abort(abortCause);
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.athlete.get({ signal: abortController.signal })).rejects.toMatchObject({
       cause: abortCause,
@@ -254,7 +306,10 @@ describe('IntervalsClient', () => {
       .mockResolvedValueOnce(textResponse)
       .mockResolvedValueOnce(bytesResponse)
       .mockResolvedValueOnce(voidResponse);
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const textError = await client.athlete.get().catch((failure: unknown) => failure);
     expect(textError).toBeInstanceOf(IntervalsNetworkError);
@@ -284,7 +339,7 @@ describe('IntervalsClient', () => {
       return Promise.reject(cause);
     });
     const client = new IntervalsClient({
-      apiKey: 'secret',
+      auth: { kind: 'apiKey', apiKey: 'secret' },
       fetch: vi.fn<typeof fetch>().mockResolvedValue(response),
     });
 
@@ -301,7 +356,7 @@ describe('IntervalsClient', () => {
     const response = new Response('failure', { status: 500 });
     vi.spyOn(response, 'text').mockRejectedValue(cause);
     const client = new IntervalsClient({
-      apiKey: 'secret',
+      auth: { kind: 'apiKey', apiKey: 'secret' },
       fetch: vi.fn<typeof fetch>().mockResolvedValue(response),
     });
 
@@ -315,7 +370,7 @@ describe('IntervalsClient', () => {
   it('rethrows existing Intervals errors unchanged', async () => {
     const expected = new IntervalsRequestError('already normalized');
     const client = new IntervalsClient({
-      apiKey: 'secret',
+      auth: { kind: 'apiKey', apiKey: 'secret' },
       fetch: vi.fn<typeof fetch>().mockRejectedValue(expected),
     });
 
@@ -324,7 +379,10 @@ describe('IntervalsClient', () => {
 
   it('wraps malformed JSON in an IntervalsResponseError', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response('not json'));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const error = await client.athlete.get().catch((cause: unknown) => cause);
 
@@ -339,7 +397,10 @@ describe('IntervalsClient', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify({ name: 'Missing ID' })));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.athlete.get()).rejects.toBeInstanceOf(IntervalsResponseError);
   });

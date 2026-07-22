@@ -18,7 +18,10 @@ describe('ActivityStreamsResource', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const streams = await client.activities.streams.get(' activity/with space ', {
       signal: abortController.signal,
@@ -42,7 +45,10 @@ describe('ActivityStreamsResource', () => {
         status: 200,
       }),
     );
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await client.activities.streams.get('activity-1');
 
@@ -51,7 +57,10 @@ describe('ActivityStreamsResource', () => {
 
   it('rejects invalid stream inputs before fetch', async () => {
     const fetchMock = vi.fn<typeof fetch>();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.activities.streams.get('   ')).rejects.toBeInstanceOf(
       IntervalsRequestError,
@@ -68,7 +77,10 @@ describe('ActivityStreamsResource', () => {
       .mockResolvedValue(
         new Response(JSON.stringify([{ name: 'Missing fields' }]), { status: 200 }),
       );
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.activities.streams.get('activity-1')).rejects.toBeInstanceOf(
       IntervalsResponseError,
@@ -81,7 +93,10 @@ describe('ActivityStreamsResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.activities.streams.update('activity-1', streams)).resolves.toEqual(
       responseBody,
@@ -98,7 +113,10 @@ describe('ActivityStreamsResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(
       client.activities.streams.updateCsv(

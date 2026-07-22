@@ -27,8 +27,11 @@ import { IntervalsWorkoutsResource, type WorkoutsResource } from './workouts.js'
 const defaultBaseUrl = 'https://intervals.icu/api/v1';
 const defaultAthleteId = '0';
 
+export type IntervalsAuth =
+  { kind: 'apiKey'; apiKey: string } | { kind: 'bearer'; accessToken: string };
+
 export interface IntervalsClientOptions {
-  apiKey: string;
+  auth: IntervalsAuth;
   athleteId?: string;
   baseUrl?: string;
   fetch?: typeof fetch;
@@ -46,13 +49,13 @@ export class IntervalsClient {
   readonly wellness: WellnessResource;
   readonly workouts: WorkoutsResource;
 
-  readonly #apiKey: string;
+  readonly #authorization: string;
   readonly #fetch: typeof fetch;
 
   constructor(options: IntervalsClientOptions) {
     try {
       const normalizedOptions = normalizeClientOptions(options);
-      this.#apiKey = normalizedOptions.apiKey;
+      this.#authorization = normalizedOptions.authorization;
       this.athleteId = normalizedOptions.athleteId;
       this.baseUrl = normalizedOptions.baseUrl;
       this.#fetch = normalizedOptions.fetch;
@@ -242,7 +245,7 @@ export class IntervalsClient {
   }
 
   #authorizationHeader(): string {
-    return `Basic ${Buffer.from(`API_KEY:${this.#apiKey}`, 'utf8').toString('base64')}`;
+    return this.#authorization;
   }
 
   #buildUrl(pathSegments: string[], query?: URLSearchParams): string {
@@ -280,8 +283,8 @@ function hasAbortErrorName(value: unknown): boolean {
 }
 
 interface NormalizedClientOptions {
-  apiKey: string;
   athleteId: string;
+  authorization: string;
   baseUrl: string;
   fetch: typeof fetch;
 }
@@ -294,11 +297,33 @@ function normalizeClientOptions(options: unknown): NormalizedClientOptions {
   const values = options as unknown as Record<string, unknown>;
 
   return {
-    apiKey: normalizeRequiredConfigurationString('apiKey', values.apiKey),
     athleteId: normalizeAthleteId(values.athleteId),
+    authorization: normalizeAuthorization(values.auth),
     baseUrl: normalizeBaseUrl(values.baseUrl),
     fetch: normalizeFetch(values.fetch),
   };
+}
+
+function normalizeAuthorization(value: unknown): string {
+  if (typeof value !== 'object' || value === null) {
+    throw new IntervalsConfigurationError('auth must be an object');
+  }
+
+  const auth = value as Record<string, unknown>;
+
+  if (auth.kind === 'apiKey') {
+    const apiKey = normalizeRequiredConfigurationString('auth.apiKey', auth.apiKey);
+
+    return `Basic ${Buffer.from(`API_KEY:${apiKey}`, 'utf8').toString('base64')}`;
+  }
+
+  if (auth.kind === 'bearer') {
+    const accessToken = normalizeRequiredConfigurationString('auth.accessToken', auth.accessToken);
+
+    return `Bearer ${accessToken}`;
+  }
+
+  throw new IntervalsConfigurationError('auth.kind must be apiKey or bearer');
 }
 
 function normalizeAthleteId(value: unknown): string {

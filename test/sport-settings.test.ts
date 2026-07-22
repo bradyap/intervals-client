@@ -20,7 +20,10 @@ describe('SportSettingsResource', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const settings = await client.sportSettings.list({
       athleteId: ' athlete/with space ',
@@ -43,7 +46,11 @@ describe('SportSettingsResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', athleteId: 'i123', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      athleteId: 'i123',
+      fetch: fetchMock,
+    });
 
     await expect(client.sportSettings.get(' Run ')).resolves.toEqual(responseBody);
 
@@ -54,7 +61,10 @@ describe('SportSettingsResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify({ types: ['Ride'] }), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.sportSettings.get('   ')).rejects.toBeInstanceOf(IntervalsRequestError);
     expect(fetchMock).not.toHaveBeenCalled();

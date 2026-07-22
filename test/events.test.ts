@@ -18,7 +18,10 @@ describe('EventsResource', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 201 }));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const event = await client.events.create(eventInput, {
       athleteId: 'i123',
@@ -40,7 +43,10 @@ describe('EventsResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify({ id: 123 }), { status: 201 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await client.events.create({ name: 'Workout' });
 
@@ -62,7 +68,10 @@ describe('EventsResource', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const events = await client.events.list({
       athleteId: 'i123',
@@ -96,7 +105,7 @@ describe('EventsResource', () => {
       }),
     );
     const client = new IntervalsClient({
-      apiKey: 'secret',
+      auth: { kind: 'apiKey', apiKey: 'secret' },
       athleteId: 'i123',
       fetch: fetchMock,
     });
@@ -118,7 +127,11 @@ describe('EventsResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', athleteId: 'i123', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      athleteId: 'i123',
+      fetch: fetchMock,
+    });
 
     await expect(client.events.update(123, eventInput)).resolves.toEqual(responseBody);
 
@@ -131,7 +144,10 @@ describe('EventsResource', () => {
   it('deletes an event without parsing an empty response', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 }));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(
       client.events.delete(' event/with space ', { signal: abortController.signal }),
@@ -148,7 +164,10 @@ describe('EventsResource', () => {
 
   it('rejects invalid event inputs before fetch', async () => {
     const fetchMock = vi.fn<typeof fetch>();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(
       client.events.list({
@@ -167,7 +186,10 @@ describe('EventsResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify({ name: 'Missing ID' }), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.events.get(123)).rejects.toBeInstanceOf(IntervalsResponseError);
   });
