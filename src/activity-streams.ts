@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { toBlob, type BinaryInput } from './activity-files.js';
 import type { ResourceRequester } from './request.js';
-import { validateRequiredString } from './resources.js';
+import { appendStringArrayQuery, validateRequiredString } from './resources.js';
 
 const activityStreamSchema = z.looseObject({
   type: z.string(),
@@ -32,7 +32,7 @@ export interface ActivityStreamWriteInput {
 
 export interface GetActivityStreamsOptions {
   signal?: AbortSignal;
-  types?: string;
+  types?: readonly string[];
 }
 
 export interface WriteActivityStreamsOptions {
@@ -69,13 +69,15 @@ export class IntervalsActivityStreamsResource implements ActivityStreamsResource
     options: GetActivityStreamsOptions = {},
   ): Promise<ActivityStream[]> {
     const normalizedActivityId = validateRequiredString('activityId', activityId);
-    const types =
-      options.types === undefined ? undefined : validateRequiredString('types', options.types);
-    const query = types ? new URLSearchParams([['types', types]]) : undefined;
+    const query = new URLSearchParams();
+
+    if (options.types !== undefined) {
+      appendStringArrayQuery(query, 'types', options.types);
+    }
 
     return this.#requestJson({
       pathSegments: ['activity', normalizedActivityId, 'streams.json'],
-      query,
+      query: query.size > 0 ? query : undefined,
       signal: options.signal,
       parse: parseActivityStreams,
       validationMessage: 'Intervals.icu response did not match the expected activity streams shape',

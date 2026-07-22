@@ -20,6 +20,20 @@ export function validateRequiredString(fieldName: string, value: unknown): strin
   return trimmedValue;
 }
 
+export function appendStringArrayQuery(
+  query: URLSearchParams,
+  fieldName: string,
+  value: unknown,
+): void {
+  if (!Array.isArray(value)) {
+    throw new IntervalsRequestError(`${fieldName} must be an array of non-empty strings`);
+  }
+
+  for (const item of value as unknown[]) {
+    query.append(fieldName, validateRequiredString(fieldName, item));
+  }
+}
+
 export function validateResourceId(fieldName: string, value: unknown): string {
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) {

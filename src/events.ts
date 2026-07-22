@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { validateDateRange, type DateRange } from './dates.js';
 import type { ResourceRequester, ResourceVoidRequester } from './request.js';
-import { resolveAthleteId, validateRequiredString, validateResourceId } from './resources.js';
+import { appendStringArrayQuery, resolveAthleteId, validateResourceId } from './resources.js';
 
 const resourceIdSchema = z.union([z.string(), z.number()]);
 const eventSchema = z.looseObject({
@@ -39,14 +39,13 @@ export interface CalendarEventWriteInput {
 
 export interface GetEventOptions {
   athleteId?: string;
-  resolve?: boolean;
   signal?: AbortSignal;
 }
 
 export interface ListEventsOptions extends DateRange {
   athleteId?: string;
   calendar_id?: string | number;
-  category?: string;
+  category?: readonly string[];
   resolve?: boolean;
   signal?: AbortSignal;
 }
@@ -122,12 +121,6 @@ export class IntervalsEventsResource implements EventsResource {
   }
 
   async get(eventId: EventId, options: GetEventOptions = {}): Promise<CalendarEvent> {
-    const query = new URLSearchParams();
-
-    if (options.resolve !== undefined) {
-      query.set('resolve', String(options.resolve));
-    }
-
     return this.#requestJson({
       pathSegments: [
         'athlete',
@@ -135,7 +128,6 @@ export class IntervalsEventsResource implements EventsResource {
         'events',
         validateResourceId('eventId', eventId),
       ],
-      query: query.size > 0 ? query : undefined,
       signal: options.signal,
       parse: parseEvent,
       validationMessage: 'Intervals.icu response did not match the expected event shape',
@@ -154,7 +146,7 @@ export class IntervalsEventsResource implements EventsResource {
     }
 
     if (options.category !== undefined) {
-      query.set('category', validateRequiredString('category', options.category));
+      appendStringArrayQuery(query, 'category', options.category);
     }
 
     if (options.resolve !== undefined) {
