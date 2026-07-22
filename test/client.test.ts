@@ -138,7 +138,7 @@ describe('IntervalsClient', () => {
     }
   });
 
-  it('rejects unsafe credential configuration without retaining its value', () => {
+  it('rejects sensitive client configuration without retaining its value', () => {
     const marker = 'private-marker';
     const captureConfigurationError = (options: IntervalsClientOptions): unknown => {
       try {
@@ -156,6 +156,8 @@ describe('IntervalsClient', () => {
         `https:\\user:${marker}@`,
         `https:/user:${marker}@`,
         `https:///user:${marker}@`,
+        `https://[bad]?access_token=${marker}`,
+        `https://[bad]#access_token=${marker}`,
       ].map((baseUrl) =>
         captureConfigurationError({
           auth: { kind: 'apiKey', apiKey: 'secret' },

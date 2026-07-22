@@ -381,6 +381,10 @@ function normalizeBaseUrl(value: unknown): string {
     throw new IntervalsConfigurationError('baseUrl must not include credentials');
   }
 
+  if (baseUrl.includes('?') || baseUrl.includes('#')) {
+    throw new IntervalsConfigurationError('baseUrl must not include a query or fragment');
+  }
+
   try {
     parsedUrl = new URL(baseUrl);
   } catch (cause) {
@@ -397,10 +401,6 @@ function normalizeBaseUrl(value: unknown): string {
 
   if (parsedUrl.username || parsedUrl.password) {
     throw new IntervalsConfigurationError('baseUrl must not include credentials');
-  }
-
-  if (baseUrl.includes('?') || baseUrl.includes('#')) {
-    throw new IntervalsConfigurationError('baseUrl must not include a query or fragment');
   }
 
   return parsedUrl.toString().replace(/\/+$/, '');
