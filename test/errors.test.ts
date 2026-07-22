@@ -18,6 +18,8 @@ describe('Intervals errors', () => {
       new IntervalsConfigurationError('invalid configuration', { cause }),
       new IntervalsHttpError({
         body: '',
+        headers: Object.freeze({}),
+        method: 'GET',
         status: 500,
         statusText: '',
         url: 'https://example.test',
@@ -52,5 +54,34 @@ describe('Intervals errors', () => {
     expect(errors[3]?.cause).toBe(cause);
     expect(errors[4]?.cause).toBe(cause);
     expect(errors[5]?.cause).toBe(cause);
+  });
+
+  it('normalizes and protects HTTP header metadata at construction', () => {
+    const sourceHeaders: Record<string, string> = {
+      ['__proto__']: 'reserved',
+      'X-Custom': 'original',
+      'X-RateLimit-Limit': '50',
+    };
+    const error = new IntervalsHttpError({
+      body: '',
+      headers: sourceHeaders,
+      method: 'POST',
+      status: 429,
+      statusText: 'Too Many Requests',
+      url: 'https://example.test',
+    });
+
+    sourceHeaders['X-Custom'] = 'changed';
+    expect(error.headers).toEqual({
+      ['__proto__']: 'reserved',
+      'x-custom': 'original',
+      'x-ratelimit-limit': '50',
+    });
+    expect(error.rateLimitLimit).toBe('50');
+    expect(error.rateLimitRemaining).toBeUndefined();
+    expect(error.rateLimitReset).toBeUndefined();
+    expect(() => {
+      (error as { headers: Record<string, string> }).headers = {};
+    }).toThrow(TypeError);
   });
 });

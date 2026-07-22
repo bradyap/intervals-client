@@ -190,6 +190,8 @@ export class IntervalsClient {
 
       throw new IntervalsHttpError({
         body,
+        headers: Object.fromEntries(response.headers),
+        method,
         status: response.status,
         statusText: response.statusText,
         url,

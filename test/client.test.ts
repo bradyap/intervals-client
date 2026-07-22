@@ -78,6 +78,12 @@ describe('IntervalsClient', () => {
   it('throws an IntervalsHttpError for unsuccessful responses', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response('Access denied', {
+        headers: {
+          'X-Custom-Header': 'custom value',
+          'X-RateLimit-Limit': '100',
+          'X-RateLimit-Remaining': '42',
+          'X-RateLimit-Reset': '2026-07-23T00:00:00Z',
+        },
         status: 403,
         statusText: 'Forbidden',
       }),
@@ -87,13 +93,48 @@ describe('IntervalsClient', () => {
     const error = await client.athlete.get().catch((cause: unknown) => cause);
 
     expect(error).toBeInstanceOf(IntervalsHttpError);
+    if (!(error instanceof IntervalsHttpError)) {
+      throw new Error('expected an IntervalsHttpError');
+    }
     expect(error).toMatchObject({
       body: 'Access denied',
+      headers: {
+        'content-type': 'text/plain;charset=UTF-8',
+        'x-custom-header': 'custom value',
+        'x-ratelimit-limit': '100',
+        'x-ratelimit-remaining': '42',
+        'x-ratelimit-reset': '2026-07-23T00:00:00Z',
+      },
+      method: 'GET',
+      rateLimitLimit: '100',
+      rateLimitRemaining: '42',
+      rateLimitReset: '2026-07-23T00:00:00Z',
       status: 403,
       statusText: 'Forbidden',
       url: 'https://intervals.icu/api/v1/athlete/0',
     });
     expect(Object.prototype.propertyIsEnumerable.call(error, 'body')).toBe(false);
+    expect(Object.isFrozen(error.headers)).toBe(true);
+    expect(() => {
+      (error.headers as Record<string, string>)['x-new-header'] = 'not allowed';
+    }).toThrow(TypeError);
+  });
+
+  it('reports the non-default request method on HTTP errors', async () => {
+    const client = new IntervalsClient({
+      apiKey: 'secret',
+      fetch: vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response('Conflict', { status: 409, statusText: 'Conflict' })),
+    });
+
+    await expect(client.workouts.create({ name: 'Workout' })).rejects.toMatchObject({
+      method: 'POST',
+      name: 'IntervalsHttpError',
+      rateLimitLimit: undefined,
+      rateLimitRemaining: undefined,
+      rateLimitReset: undefined,
+    });
   });
 
   it('normalizes fetch failures while preserving their cause and request metadata', async () => {
