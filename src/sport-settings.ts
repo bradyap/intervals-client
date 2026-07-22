@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import type { ResourceRequester } from './request.js';
-import { resolveAthleteId, validateResourceId } from './resources.js';
+import { resolveAthleteId, validateResourceId, withRequestErrorBoundary } from './resources.js';
 
 const optionalNumber = z.number().nullable().optional();
 const optionalNumberArray = z.array(z.number()).nullable().optional();
@@ -63,31 +63,35 @@ export class IntervalsSportSettingsResource implements SportSettingsResource {
     settingsId: SportSettingsId,
     options: GetSportSettingsOptions = {},
   ): Promise<SportSettings> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'sport-settings',
-        validateResourceId('settingsId', settingsId),
-      ],
-      signal: options.signal,
-      parse: parseSportSettings,
-      validationMessage: 'Intervals.icu response did not match the expected sport settings shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'sport-settings',
+          validateResourceId('settingsId', settingsId),
+        ],
+        signal: options.signal,
+        parse: parseSportSettings,
+        validationMessage: 'Intervals.icu response did not match the expected sport settings shape',
+      }),
+    );
   }
 
   async list(options: ListSportSettingsOptions = {}): Promise<SportSettings[]> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'sport-settings',
-      ],
-      signal: options.signal,
-      parse: parseSportSettingsList,
-      validationMessage:
-        'Intervals.icu response did not match the expected sport settings list shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'sport-settings',
+        ],
+        signal: options.signal,
+        parse: parseSportSettingsList,
+        validationMessage:
+          'Intervals.icu response did not match the expected sport settings list shape',
+      }),
+    );
   }
 }
 

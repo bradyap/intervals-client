@@ -18,46 +18,58 @@ describe('ActivityStreamsResource', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const streams = await client.activities.streams.get(' activity/with space ', {
       signal: abortController.signal,
-      types: ' watts,heartrate ',
+      types: [' watts ', 'heartrate'] as const,
     });
 
     expect(streams).toEqual(responseBody);
     expect(streams[0]).not.toHaveProperty('all_null');
     const requestUrl = getRequestedUrl(fetchMock);
     expect(requestUrl.pathname).toBe('/api/v1/activity/activity%2Fwith%20space/streams.json');
-    expect(requestUrl.searchParams.get('types')).toBe('watts,heartrate');
+    expect(requestUrl.searchParams.getAll('types')).toEqual(['watts', 'heartrate']);
     expect(fetchMock).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ signal: abortController.signal }),
     );
   });
 
-  it('requests all streams when types are omitted', async () => {
+  it('requests all streams when an empty readonly types array is provided', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(JSON.stringify([{ type: 'time', data: [0, 1] }]), {
         status: 200,
       }),
     );
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
-    await client.activities.streams.get('activity-1');
+    await client.activities.streams.get('activity-1', { types: [] as const });
 
     expect(getRequestedUrl(fetchMock).searchParams.has('types')).toBe(false);
   });
 
   it('rejects invalid stream inputs before fetch', async () => {
     const fetchMock = vi.fn<typeof fetch>();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.activities.streams.get('   ')).rejects.toBeInstanceOf(
       IntervalsRequestError,
     );
     await expect(
-      client.activities.streams.get('activity-1', { types: '   ' }),
+      client.activities.streams.get('activity-1', { types: ['watts', '   '] }),
+    ).rejects.toBeInstanceOf(IntervalsRequestError);
+    await expect(
+      client.activities.streams.get('activity-1', { types: 'watts' as never }),
     ).rejects.toBeInstanceOf(IntervalsRequestError);
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -68,7 +80,10 @@ describe('ActivityStreamsResource', () => {
       .mockResolvedValue(
         new Response(JSON.stringify([{ name: 'Missing fields' }]), { status: 200 }),
       );
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.activities.streams.get('activity-1')).rejects.toBeInstanceOf(
       IntervalsResponseError,
@@ -81,7 +96,10 @@ describe('ActivityStreamsResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.activities.streams.update('activity-1', streams)).resolves.toEqual(
       responseBody,
@@ -98,7 +116,10 @@ describe('ActivityStreamsResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(
       client.activities.streams.updateCsv(

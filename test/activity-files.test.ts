@@ -9,7 +9,10 @@ describe('activity file resources', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const file = await client.activities.file.get(' activity/1 ', {
       signal: abortController.signal,
@@ -26,7 +29,10 @@ describe('activity file resources', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(new Uint8Array([4, 5, 6]), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(
       client.activities.fitFile.get('activity-1', { power: false, hr: true }),

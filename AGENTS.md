@@ -30,4 +30,4 @@ Use Conventional Commit prefixes such as `feat:`, `fix:`, `docs:`, `test:`, and 
 
 ## Security & Configuration Tips
 
-Never commit API keys, tokens, or local `.env` files. Personal API-key authentication is the supported authentication mode; OAuth is out of scope until a real consumer requires it. Optional live smoke tests may read `INTERVALS_API_KEY` from a local `.env`, must not print credentials or private response data, and must clean up any created records in `finally`. Do not add retries, pagination abstractions, broad input validation, or new endpoint families without a demonstrated consumer need.
+Never commit API keys, bearer tokens, or local `.env` files. The client supports personal API-key authentication and caller-supplied bearer tokens; acquiring, refreshing, and storing OAuth tokens remain out of scope. Optional live smoke tests may read credentials from a local `.env`, must not print credentials or private response data, and must clean up any created records in `finally`. Do not add retries, pagination abstractions, broad input validation, or new endpoint families without a demonstrated consumer need.

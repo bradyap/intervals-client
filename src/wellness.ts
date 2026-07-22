@@ -6,8 +6,9 @@ import {
   type DateRange,
   type IsoDateString,
 } from './dates.js';
+import { IntervalsRequestError } from './errors.js';
 import type { ResourceRequester, ResourceVoidRequester } from './request.js';
-import { resolveAthleteId } from './resources.js';
+import { resolveAthleteId, withRequestErrorBoundary } from './resources.js';
 
 const optionalMetric = z.number().nullable().optional();
 const wellnessRecordSchema = z.looseObject({
@@ -106,37 +107,43 @@ export class IntervalsWellnessResource implements WellnessResource {
   }
 
   async get(date: IsoDateString, options: GetWellnessOptions = {}): Promise<WellnessRecord> {
-    const normalizedDate = validateIsoDateString('date', date);
+    return withRequestErrorBoundary(() => {
+      const normalizedDate = validateIsoDateString('date', date);
 
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'wellness',
-        normalizedDate,
-      ],
-      signal: options.signal,
-      parse: parseWellnessRecord,
-      validationMessage: 'Intervals.icu response did not match the expected wellness record shape',
+      return this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'wellness',
+          normalizedDate,
+        ],
+        signal: options.signal,
+        parse: parseWellnessRecord,
+        validationMessage:
+          'Intervals.icu response did not match the expected wellness record shape',
+      });
     });
   }
 
   async list(options: ListWellnessOptions): Promise<WellnessRecord[]> {
-    const dateRange = validateDateRange(options);
+    return withRequestErrorBoundary(() => {
+      const dateRange = validateDateRange(options);
 
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'wellness',
-      ],
-      query: new URLSearchParams([
-        ['oldest', dateRange.oldest],
-        ['newest', dateRange.newest],
-      ]),
-      signal: options.signal,
-      parse: parseWellnessRecords,
-      validationMessage: 'Intervals.icu response did not match the expected wellness records shape',
+      return this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'wellness',
+        ],
+        query: new URLSearchParams([
+          ['oldest', dateRange.oldest],
+          ['newest', dateRange.newest],
+        ]),
+        signal: options.signal,
+        parse: parseWellnessRecords,
+        validationMessage:
+          'Intervals.icu response did not match the expected wellness records shape',
+      });
     });
   }
 
@@ -145,39 +152,58 @@ export class IntervalsWellnessResource implements WellnessResource {
     wellness: WellnessWriteInput,
     options: WriteWellnessOptions = {},
   ): Promise<WellnessRecord> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'wellness',
-        validateIsoDateString('date', date),
-      ],
-      method: 'PUT',
-      json: wellness,
-      signal: options.signal,
-      parse: parseWellnessRecord,
-      validationMessage: 'Intervals.icu response did not match the expected wellness record shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'wellness',
+          validateIsoDateString('date', date),
+        ],
+        method: 'PUT',
+        json: wellness,
+        signal: options.signal,
+        parse: parseWellnessRecord,
+        validationMessage:
+          'Intervals.icu response did not match the expected wellness record shape',
+      }),
+    );
   }
 
   async updateBulk(
     records: WellnessBulkWriteInput[],
     options: WriteWellnessOptions = {},
   ): Promise<void> {
-    const normalizedRecords = records.map((record) => ({
-      ...record,
-      id: validateIsoDateString('date', record.id),
-    }));
+    return withRequestErrorBoundary(() => {
+      const input: unknown = records;
 
-    await this.#requestVoid({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'wellness-bulk',
-      ],
-      method: 'PUT',
-      json: normalizedRecords,
-      signal: options.signal,
+      if (!Array.isArray(input)) {
+        throw new IntervalsRequestError('records must be an array');
+      }
+
+      const normalizedRecords = input.map((record: unknown) => {
+        if (typeof record !== 'object' || record === null || Array.isArray(record)) {
+          throw new IntervalsRequestError('each wellness record must be an object');
+        }
+
+        const wellnessRecord = record as WellnessBulkWriteInput;
+
+        return {
+          ...wellnessRecord,
+          id: validateIsoDateString('date', wellnessRecord.id),
+        };
+      });
+
+      return this.#requestVoid({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'wellness-bulk',
+        ],
+        method: 'PUT',
+        json: normalizedRecords,
+        signal: options.signal,
+      });
     });
   }
 }

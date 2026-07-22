@@ -16,7 +16,10 @@ describe('FoldersResource', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 201 }));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const folder = await client.folders.create(folderInput, {
       athleteId: 'i123',
@@ -48,7 +51,10 @@ describe('FoldersResource', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const folders = await client.folders.list({
       athleteId: 'i123',
@@ -69,7 +75,10 @@ describe('FoldersResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify([{ name: 'Missing ID' }]), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.folders.list()).rejects.toBeInstanceOf(IntervalsResponseError);
   });
@@ -83,7 +92,11 @@ describe('FoldersResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', athleteId: 'i123', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      athleteId: 'i123',
+      fetch: fetchMock,
+    });
 
     await expect(client.folders.update(123, folderInput)).resolves.toEqual(responseBody);
 
@@ -96,7 +109,10 @@ describe('FoldersResource', () => {
   it('deletes a folder without parsing an empty response', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 }));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(
       client.folders.delete(' folder/with space ', { signal: abortController.signal }),
@@ -113,7 +129,10 @@ describe('FoldersResource', () => {
 
   it('rejects invalid folder ids before fetch', async () => {
     const fetchMock = vi.fn<typeof fetch>();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.folders.update('   ', {})).rejects.toBeInstanceOf(IntervalsRequestError);
     await expect(client.folders.delete(Number.NaN)).rejects.toBeInstanceOf(IntervalsRequestError);
