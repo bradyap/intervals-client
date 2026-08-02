@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import type { ResourceRequester } from './request.js';
-import { resolveAthleteId } from './resources.js';
+import { resolveAthleteId, withRequestErrorBoundary } from './resources.js';
 
 const athleteProfileSchema = z.looseObject({
   id: z.string(),
@@ -34,12 +34,15 @@ export class IntervalsAthleteResource implements AthleteResource {
   }
 
   async get(options: GetAthleteOptions = {}): Promise<AthleteProfile> {
-    return this.#requestJson({
-      pathSegments: ['athlete', resolveAthleteId(options.athleteId, this.#defaultAthleteId)],
-      signal: options.signal,
-      parse: parseAthleteProfile,
-      validationMessage: 'Intervals.icu response did not match the expected athlete profile shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: ['athlete', resolveAthleteId(options.athleteId, this.#defaultAthleteId)],
+        signal: options.signal,
+        parse: parseAthleteProfile,
+        validationMessage:
+          'Intervals.icu response did not match the expected athlete profile shape',
+      }),
+    );
   }
 }
 

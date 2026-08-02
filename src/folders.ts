@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import type { ResourceRequester, ResourceVoidRequester } from './request.js';
-import { resolveAthleteId, validateResourceId } from './resources.js';
+import { resolveAthleteId, validateResourceId, withRequestErrorBoundary } from './resources.js';
 
 const folderSchema = z.looseObject({
   id: z.union([z.string(), z.number()]),
@@ -73,44 +73,50 @@ export class IntervalsFoldersResource implements FoldersResource {
     folder: WorkoutFolderWriteInput,
     options: WriteFolderOptions = {},
   ): Promise<WorkoutFolder> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'folders',
-      ],
-      method: 'POST',
-      json: folder,
-      signal: options.signal,
-      parse: parseFolder,
-      validationMessage: 'Intervals.icu response did not match the expected folder shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'folders',
+        ],
+        method: 'POST',
+        json: folder,
+        signal: options.signal,
+        parse: parseFolder,
+        validationMessage: 'Intervals.icu response did not match the expected folder shape',
+      }),
+    );
   }
 
   async delete(folderId: WorkoutFolderId, options: WriteFolderOptions = {}): Promise<void> {
-    await this.#requestVoid({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'folders',
-        validateResourceId('folderId', folderId),
-      ],
-      method: 'DELETE',
-      signal: options.signal,
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestVoid({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'folders',
+          validateResourceId('folderId', folderId),
+        ],
+        method: 'DELETE',
+        signal: options.signal,
+      }),
+    );
   }
 
   async list(options: ListFoldersOptions = {}): Promise<WorkoutFolder[]> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'folders',
-      ],
-      signal: options.signal,
-      parse: parseFolders,
-      validationMessage: 'Intervals.icu response did not match the expected folders shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'folders',
+        ],
+        signal: options.signal,
+        parse: parseFolders,
+        validationMessage: 'Intervals.icu response did not match the expected folders shape',
+      }),
+    );
   }
 
   async update(
@@ -118,19 +124,21 @@ export class IntervalsFoldersResource implements FoldersResource {
     folder: WorkoutFolderWriteInput,
     options: WriteFolderOptions = {},
   ): Promise<WorkoutFolder> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'folders',
-        validateResourceId('folderId', folderId),
-      ],
-      method: 'PUT',
-      json: folder,
-      signal: options.signal,
-      parse: parseFolder,
-      validationMessage: 'Intervals.icu response did not match the expected folder shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'folders',
+          validateResourceId('folderId', folderId),
+        ],
+        method: 'PUT',
+        json: folder,
+        signal: options.signal,
+        parse: parseFolder,
+        validationMessage: 'Intervals.icu response did not match the expected folder shape',
+      }),
+    );
   }
 }
 

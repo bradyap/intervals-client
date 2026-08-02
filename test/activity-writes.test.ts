@@ -14,7 +14,10 @@ describe('activity writes', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.activities.update('activity-1', activityInput)).resolves.toEqual(
       responseBody,
@@ -31,7 +34,10 @@ describe('activity writes', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.activities.delete('activity-1')).resolves.toEqual(responseBody);
 
@@ -48,7 +54,10 @@ describe('activity writes', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(
       client.activities.upload(new Uint8Array([1, 2, 3]), {
@@ -84,7 +93,10 @@ describe('activity writes', () => {
 
   it('rejects invalid activity write inputs before fetch', async () => {
     const fetchMock = vi.fn<typeof fetch>();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.activities.update('   ', {})).rejects.toBeInstanceOf(IntervalsRequestError);
     await expect(client.activities.delete('   ')).rejects.toBeInstanceOf(IntervalsRequestError);

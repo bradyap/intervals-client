@@ -18,7 +18,10 @@ describe('CalendarsResource', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const calendars = await client.calendars.list({
       athleteId: 'i123',
@@ -38,7 +41,10 @@ describe('CalendarsResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify([{ name: 'Missing ID' }]), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.calendars.list()).rejects.toBeInstanceOf(IntervalsResponseError);
   });

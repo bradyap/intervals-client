@@ -18,7 +18,10 @@ describe('WellnessResource', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     const records = await client.wellness.list({
       athleteId: ' athlete/with space ',
@@ -46,7 +49,7 @@ describe('WellnessResource', () => {
       }),
     );
     const client = new IntervalsClient({
-      apiKey: 'secret',
+      auth: { kind: 'apiKey', apiKey: 'secret' },
       athleteId: 'i123',
       fetch: fetchMock,
     });
@@ -58,7 +61,10 @@ describe('WellnessResource', () => {
 
   it('rejects invalid wellness dates before fetch', async () => {
     const fetchMock = vi.fn<typeof fetch>();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.wellness.get('2026-02-30')).rejects.toBeInstanceOf(IntervalsRequestError);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -68,7 +74,10 @@ describe('WellnessResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify({ weight: 70 }), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.wellness.get('2026-07-01')).rejects.toBeInstanceOf(IntervalsResponseError);
   });
@@ -80,7 +89,10 @@ describe('WellnessResource', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(
       client.wellness.update(' 2026-07-01 ', wellnessInput, {
@@ -102,7 +114,11 @@ describe('WellnessResource', () => {
       { id: '2026-07-02', hrv: 65 },
     ];
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', athleteId: 'i123', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      athleteId: 'i123',
+      fetch: fetchMock,
+    });
 
     await expect(client.wellness.updateBulk(records)).resolves.toBeUndefined();
 
@@ -119,7 +135,10 @@ describe('WellnessResource', () => {
 
   it('rejects invalid wellness write dates before fetch', async () => {
     const fetchMock = vi.fn<typeof fetch>();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.wellness.update('2026-02-30', {})).rejects.toBeInstanceOf(
       IntervalsRequestError,

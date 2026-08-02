@@ -18,7 +18,10 @@ describe('ActivitiesResource', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify(responseBody)))
       .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'activity-2' })));
     const abortController = new AbortController();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(
       client.activities.get(' activity/with space ', {
@@ -40,7 +43,10 @@ describe('ActivitiesResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify(responseBody), { status: 200 }));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(
       client.activities.list({
@@ -58,7 +64,10 @@ describe('ActivitiesResource', () => {
 
   it('rejects invalid activity inputs before fetch', async () => {
     const fetchMock = vi.fn<typeof fetch>();
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(client.activities.get('   ')).rejects.toBeInstanceOf(IntervalsRequestError);
     await expect(
@@ -71,7 +80,10 @@ describe('ActivitiesResource', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response(JSON.stringify([{ name: 'Missing ID' }])));
-    const client = new IntervalsClient({ apiKey: 'secret', fetch: fetchMock });
+    const client = new IntervalsClient({
+      auth: { kind: 'apiKey', apiKey: 'secret' },
+      fetch: fetchMock,
+    });
 
     await expect(
       client.activities.list({ oldest: '2026-07-01', newest: '2026-07-08' }),

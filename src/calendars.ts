@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import type { ResourceRequester } from './request.js';
-import { resolveAthleteId } from './resources.js';
+import { resolveAthleteId, withRequestErrorBoundary } from './resources.js';
 
 const calendarSchema = z.looseObject({
   id: z.union([z.string(), z.number()]),
@@ -41,16 +41,18 @@ export class IntervalsCalendarsResource implements CalendarsResource {
   }
 
   async list(options: ListCalendarsOptions = {}): Promise<Calendar[]> {
-    return this.#requestJson({
-      pathSegments: [
-        'athlete',
-        resolveAthleteId(options.athleteId, this.#defaultAthleteId),
-        'calendars',
-      ],
-      signal: options.signal,
-      parse: parseCalendars,
-      validationMessage: 'Intervals.icu response did not match the expected calendars shape',
-    });
+    return withRequestErrorBoundary(() =>
+      this.#requestJson({
+        pathSegments: [
+          'athlete',
+          resolveAthleteId(options.athleteId, this.#defaultAthleteId),
+          'calendars',
+        ],
+        signal: options.signal,
+        parse: parseCalendars,
+        validationMessage: 'Intervals.icu response did not match the expected calendars shape',
+      }),
+    );
   }
 }
 
