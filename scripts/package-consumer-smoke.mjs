@@ -37,7 +37,7 @@ try {
 
   const sourceManifest = await readJson(join(repositoryRoot, 'package.json'));
   assert.equal(sourceManifest.name, '@bradyap/intervals-client');
-  assert.equal(sourceManifest.version, '0.9.0');
+  assert.equal(sourceManifest.version, '1.0.0');
   assert.equal(sourceManifest.private, true);
   assert.equal(sourceManifest.license, 'MIT');
   assert.deepEqual(sourceManifest.files, ['dist']);
