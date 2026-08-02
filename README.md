@@ -1,18 +1,17 @@
 # @bradyap/intervals-client
 
-A small TypeScript client for the Intervals.icu API. The package is currently version `0.9.0`,
-requires Node.js 24 or newer, and remains under unstable pre-release development.
+A small TypeScript client for the Intervals.icu API. The package is currently version `1.0.0`
+and requires Node.js 24 or newer.
 
 ## Installation
 
-Install the latest development revision from GitHub:
+Install the stable v1 release from GitHub:
 
 ```sh
-npm install github:bradyap/intervals-client#main
+npm install github:bradyap/intervals-client#v1.0.0
 ```
 
-`#main` can change without notice. Real consumers should replace `main` with an exact
-40-character commit SHA so updates remain deliberate and reproducible:
+For an immutable dependency, replace the tag with its exact 40-character release commit SHA:
 
 ```sh
 npm install github:bradyap/intervals-client#0123456789abcdef0123456789abcdef01234567
