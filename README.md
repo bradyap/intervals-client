@@ -116,6 +116,8 @@ such as `calendar_id`, `device_name`, `restingHR`, and `spO2`; there is no field
 layer. Write DTOs intentionally allow additional fields. Response parsing validates only stable
 structure and identifiers, and preserves unknown response fields.
 
+Calendar event `distance` is measured in meters and accepts a number or `null` when provided.
+
 ## Errors
 
 Library failures share the following public error hierarchy:

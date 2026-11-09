@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { IntervalsClient, IntervalsRequestError, IntervalsResponseError } from '../src/index.js';
+import { parseEvent, parseEvents } from '../src/events.js';
 import { getRequestedUrl } from './helpers.js';
 
 describe('EventsResource', () => {
@@ -10,6 +11,7 @@ describe('EventsResource', () => {
       start_date_local: '2026-07-14T00:00:00',
       name: 'Threshold Session',
       description: '- 10m 50%\n- 3x 8m 100%',
+      distance: 40_000.5,
       type: 'Ride',
       external_id: 'event-123',
     };
@@ -121,6 +123,7 @@ describe('EventsResource', () => {
     const eventInput = {
       category: 'WORKOUT',
       name: 'Updated Threshold Session',
+      distance: 42_195.25,
       start_date_local: '2026-07-14T00:00:00',
     };
     const responseBody = { id: 123, ...eventInput };
@@ -220,5 +223,22 @@ describe('EventsResource', () => {
     });
 
     await expect(client.events.get(123)).rejects.toBeInstanceOf(IntervalsResponseError);
+  });
+
+  it.each([{ distance: 42_195.25 }, { distance: 0 }, { distance: null }, {}])(
+    'parses and retains optional event distance: %j',
+    (fields) => {
+      const event = { id: 123, ...fields };
+
+      expect(parseEvent(event)).toEqual(event);
+      expect(parseEvents([event])).toEqual([event]);
+    },
+  );
+
+  it('rejects a nonnumeric event response distance', () => {
+    const event = { id: 123, distance: '42195.25' };
+
+    expect(() => parseEvent(event)).toThrow();
+    expect(() => parseEvents([event])).toThrow();
   });
 });

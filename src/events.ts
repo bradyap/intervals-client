@@ -15,6 +15,8 @@ const eventSchema = z.looseObject({
   calendar_id: resourceIdSchema.nullable().optional(),
   category: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
+  /** Distance in meters. */
+  distance: z.number().nullable().optional(),
   end_date_local: z.string().nullable().optional(),
   icu_training_load: z.number().nullable().optional(),
   moving_time: z.number().nullable().optional(),
@@ -33,6 +35,8 @@ export interface CalendarEventWriteInput {
   calendar_id?: string | number | null;
   category?: string | null;
   description?: string | null;
+  /** Distance in meters. */
+  distance?: number | null;
   end_date_local?: string | null;
   icu_training_load?: number | null;
   moving_time?: number | null;
